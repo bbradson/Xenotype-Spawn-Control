@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+	<PawnKinds>PawnKinds</PawnKinds>
+	<Editor>Editor</Editor>
+	<NoFaction>No Faction</NoFaction>
+	<HybridTooltip>The chance for pawns to spawn with a set of genes generated from two valid parent Xenotypes</HybridTooltip>
+	<RandomGenes>Random Genes</RandomGenes>
+	<RandomGenesTooltip>The chance for pawns to spawn with entirely random genes, only constrained by metabolism limits</RandomGenesTooltip>
+	<MakeYourOwn>Make your own</MakeYourOwn>
+	<INACTIVE>INACTIVE</INACTIVE>
+	<edit>edit</edit>
+	<ConfirmResetXenotypeSpawnControl>Really reset all Xenotype Spawn Control settings?</ConfirmResetXenotypeSpawnControl>
+</LanguageData>

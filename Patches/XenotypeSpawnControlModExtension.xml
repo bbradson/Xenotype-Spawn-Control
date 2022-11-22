@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Patch>
+	<Operation Class="PatchOperationAddModExtension">
+		<xpath>/Defs/PawnKindDef[defName="StrangerInBlack"]</xpath>
+		<value>
+			<li Class="XenotypeSpawnControl.Extension">
+				<randomGenesChance>0.25</randomGenesChance>
+				<hybridChance>0.1</hybridChance>
+			</li>
+		</value>
+	</Operation>
+</Patch>

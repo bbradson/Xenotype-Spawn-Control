@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+	<name>Xenotype Spawn Control</name>
+	<packageId>bs.xenotypespawncontrol</packageId>
+	<supportedVersions>
+		<li>1.4</li>
+	</supportedVersions>
+	<author>bradson</author>
+	<url>https://github.com/bbradson/Xenotype-Spawn-Control</url>
+	<modDependencies>
+		<li>
+			<packageId>brrainz.harmony</packageId>
+			<displayName>Harmony</displayName>
+			<steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+			<downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+		</li>
+		<li>
+			<packageId>Ludeon.RimWorld.Biotech</packageId>
+			<displayName>Biotech</displayName>
+		</li>
+	</modDependencies>
+	<description>Diversify the xenotypes in your world! Xenotype Spawn Control grants full control over spawn rates of xenotypes, including those made by yourself, within factions, pawnkinds and even memes. Additionally it adds options to spawn randomly generated, fully unique xenotypes and hybrids. A neat overview of selfmade xenotypes with quick access to the editor is included too.</description>
+</ModMetaData>
