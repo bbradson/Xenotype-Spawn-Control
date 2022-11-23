@@ -136,11 +136,12 @@ public class XenotypeChances<T> : IExposable where T : Def
 				if (activeXenotype.Value.Xenotype.Def == XenotypeDefOf.Baseliner)
 					continue;
 
-				if (activeChancesSum == rawChanceValue || activeChancesSum == AllActiveXenotypes.Count - 1)
+				if (delta == rawChanceValue || activeChancesSum == AllActiveXenotypes.Count - 1)
 					break;
 
 				SetChanceForXenotype(activeXenotype.Value.Xenotype, 1, false);
 				activeChancesSum++;
+				delta--;
 				_counter++;
 				ClampRepeat(ref _counter, 0, AllActiveXenotypes.Count - 2);
 			}
