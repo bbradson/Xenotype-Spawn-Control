@@ -8,8 +8,8 @@ namespace XenotypeSpawnControl;
 public partial class ModifiableXenotype
 {
 	public string Name { get; }
-	public virtual string Label => Name.CapitalizeFirst();
-	public virtual string? Tooltip => null;
+	public virtual string Label => Def != null ? Def.LabelCap : Name.CapitalizeFirst();
+	public virtual string? Tooltip => Def?.descriptionShort;
 	public XenotypeDef? Def { get; }
 	public CustomXenotype? CustomXenotype { get; }
 

@@ -1,0 +1,4 @@
+# ignore vscode specific files
+.vscode/
+# ignore generated obj files
+Source/obj

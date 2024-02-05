@@ -100,8 +100,8 @@ public static class ModSettingsWindow
 		public Listing_Standard Listing { get; } = new() { verticalSpacing = 4f };
 
 		private string? _currentlySelectedDefName;
-		private ScrollViewStatus _defScrollViewStatus;
-		private ScrollViewStatus _xenotypeScrollViewStatus;
+		private ScrollViewStatus _defScrollViewStatus = new();
+		private ScrollViewStatus _xenotypeScrollViewStatus = new();
 
 		public override void DoWindowContents(Rect inRect)
 		{
@@ -113,7 +113,7 @@ public static class ModSettingsWindow
 
 		public void ListDefs(Rect outRect)
 		{
-			using var listingScope = new ScrollableListingScope(outRect, ref _defScrollViewStatus, Listing);
+			using var listingScope = new ScrollableListingScope(outRect, _defScrollViewStatus, Listing);
 
 			foreach (var def in Defs.OrderBy(def => def.defName))
 			{
@@ -124,7 +124,7 @@ public static class ModSettingsWindow
 				//if (factionDefName.Length > LINE_MAX)
 				//	factionDefName = factionDefName.Substring(0, LINE_MAX) + "...";
 
-				if (Listing.SelectionButton(defName, _currentlySelectedDefName == defName))
+				if (Listing.SelectionButton(def.LabelCap + "(" + defName + ")", _currentlySelectedDefName == defName))
 					_currentlySelectedDefName = defName;
 			}
 
@@ -140,7 +140,7 @@ public static class ModSettingsWindow
 			if (_currentlySelectedDefName is null)
 				return;
 
-			using var listingScope = new ScrollableListingScope(outRect, ref _xenotypeScrollViewStatus, Listing);
+			using var listingScope = new ScrollableListingScope(outRect, _xenotypeScrollViewStatus, Listing);
 
 			var xenotypeChances = XenotypeChanceDatabase<T>.For(_currentlySelectedDefName);
 			foreach (var xenotypeChance in xenotypeChances.AllSavedValues.OrderBy(pair => pair.Key))
@@ -183,12 +183,12 @@ public static class ModSettingsWindow
 
 	public class EditorTab : Tab
 	{
-		private ScrollViewStatus _scrollViewStatus;
+		private ScrollViewStatus _scrollViewStatus = new();
 		public Listing_Standard Listing { get; } = new() { verticalSpacing = 4f };
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			using var listingScope = new ScrollableListingScope(inRect, ref _scrollViewStatus, Listing);
+			using var listingScope = new ScrollableListingScope(inRect, _scrollViewStatus, Listing);
 
 			foreach (var customXenotype in ModifiableXenotypeDatabase.CustomXenotypes)
 			{
