@@ -67,7 +67,9 @@ public static class Listing_StandardExtensions
 
 	public static bool SelectionButton(this Listing_Standard listing, string label, bool active)
 	{
-		var rect = listing.GetRect(36f);
+		//remember to remove text contraction from column width and add downwards margin to get accurate sized rect
+		var rect = listing.GetRect(Text.CalcHeight(label, listing.ColumnWidth - 33) + 15f);
+		//contract the rect a bit so they aren't pressed flush against the borders
 		rect = rect.ContractedBy(4f);
 		Widgets.DrawOptionBackground(rect, active);
 		if (Widgets.ButtonInvisible(rect))
@@ -75,7 +77,9 @@ public static class Listing_StandardExtensions
 			SoundDefOf.Click.PlayOneShotOnCamera();
 			active = true;
 		}
+		//leave some space around the text
 		rect.xMin += 20f;
+		rect.xMax -= 5f;
 		Widgets.Label(rect, label);
 		return active;
 	}

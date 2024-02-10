@@ -124,7 +124,7 @@ public static class ModSettingsWindow
 				//if (factionDefName.Length > LINE_MAX)
 				//	factionDefName = factionDefName.Substring(0, LINE_MAX) + "...";
 
-				if (Listing.SelectionButton(def.LabelCap + "(" + defName + ")", _currentlySelectedDefName == defName))
+				if (Listing.SelectionButton(def.LabelCap + " (" + defName + ")", _currentlySelectedDefName == defName))
 					_currentlySelectedDefName = defName;
 			}
 
