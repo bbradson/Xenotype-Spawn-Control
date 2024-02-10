@@ -151,14 +151,18 @@ public static class ModSettingsWindow
 					continue;
 				}
 
-				var sliderResult = Listing.IntSlider(modifiableXenotype.Xenotype.Label,
-					 modifiableXenotype.Xenotype.Def == XenotypeDefOf.Baseliner
-					 ? Mathf.RoundToInt(xenotypeChances.GetBaselinerChance() * 1000f)
-					 : xenotypeChance.Value.RawValue,
-					 0, 1000, 3, modifiableXenotype.Xenotype.Tooltip);
+				var (ChanceValue, ChanceString) = Listing.FloatBoxSlider(modifiableXenotype.Xenotype.Label,
+					 modifiableXenotype.Chance.ChanceString, modifiableXenotype.Chance.Value, modifiableXenotype.Xenotype.Tooltip);
+				var chanceModified = ChanceValue != modifiableXenotype.Chance.RawValue;
+				var sliderStringModified = modifiableXenotype.Chance.ChanceString != ChanceString;
 
-				if (sliderResult - Mathf.RoundToInt(xenotypeChance.Value.RawValue) != 0)
-					xenotypeChances.SetChanceForXenotype(xenotypeChance.Key, sliderResult);
+				if (chanceModified)
+				{
+					xenotypeChances.SetChanceForXenotype(xenotypeChance.Key, ChanceValue);
+				}
+				// if chance string has been changed via textbox use it's value instead
+				if (sliderStringModified)
+					modifiableXenotype.Chance.ChanceString = ChanceString;
 			}
 
 			if (Listing.ButtonText(Strings.Translated.Reset))

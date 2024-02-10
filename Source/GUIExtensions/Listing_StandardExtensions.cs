@@ -3,47 +3,66 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Globalization;
 using Verse.Sound;
 
 namespace XenotypeSpawnControl.GUIExtensions;
 public static class Listing_StandardExtensions
 {
-	public static float SliderRounded(this Listing_Standard listing, string label, float currentValue, float min, float max, int digits, string? tooltip = null)
+	public static (int ChanceValue, string ChanceString) FloatBoxSlider(this Listing_Standard listing, string label, string currentString, float currentValue, string? tooltip = null)
 	{
+		//remember previous text alignment
 		var previousAlignment = Text.Anchor;
 		Text.Anchor = TextAnchor.MiddleRight;
-		Widgets.Label(new(0f, listing.curY, listing.ColumnWidth, Text.CalcHeight("99.9%", listing.ColumnWidth)), $"{Math.Round(Convert.ToDecimal(currentValue * 100f), digits - 2)}%");
-		Text.Anchor = previousAlignment;
-		listing.Label(label, tooltip: tooltip);
-		return (float)Math.Round(listing.Slider(currentValue, min, max), digits);
-	}
 
-	public static int IntSlider(this Listing_Standard listing, string label, int currentValue, int min, int max, int digits, string? tooltip = null)
-	{
-		var previousAlignment = Text.Anchor;
-		Text.Anchor = TextAnchor.MiddleRight;
-		/*Widgets.Label(
-			   new(0f, listing.curY, listing.ColumnWidth, Text.CalcHeight("99.9%", listing.ColumnWidth)),
-			   digits >= 2 ? $"{currentValue / (decimal)Mathf.RoundToInt((float)Math.Pow(10, digits - 2))}%"
-			   : digits != 0 ? $"{currentValue / (decimal)Mathf.RoundToInt((float)Math.Pow(10, digits))}"
-			   : $"{currentValue}");*/
-		var percentageSize = digits >= 2 ? Text.CalcSize("%") : Vector2.zero;
-		var textFieldSize = Text.CalcSize("99.9)");
-
-		if (digits >= 2)
-			Widgets.Label(new(0f, listing.curY, listing.ColumnWidth, percentageSize.y), "%");
-
-		if (decimal.TryParse(Widgets.TextField(new(listing.ColumnWidth - textFieldSize.x - percentageSize.x, listing.curY, textFieldSize.x, textFieldSize.y),
-			   digits >= 2 ? $"{currentValue / (decimal)Mathf.RoundToInt((float)Math.Pow(10, digits - 2))}"
-			   : digits != 0 ? $"{currentValue / (decimal)Mathf.RoundToInt((float)Math.Pow(10, digits))}"
-			   : $"{currentValue}"), out var newValue))
+		var percentageSize = Text.CalcSize("%");
+		//draw percentage Label
+		Widgets.Label(new(0f, listing.curY, listing.ColumnWidth, percentageSize.y), "%");
+		//draw percentage string
+		var textFieldSize = Text.CalcSize("77.77)");
+		var textFieldResult = Widgets.TextField(new(listing.ColumnWidth - textFieldSize.x - percentageSize.x, listing.curY, textFieldSize.x, textFieldSize.y), currentString);
+		// sanitize entered percentage
+		if (textFieldResult.NullOrEmpty() || textFieldResult == ".")
 		{
-			currentValue = (int)(newValue * 10m);
+			currentValue = 0f;
+			currentString = textFieldResult;
+			
+		}
+		else if (float.TryParse(textFieldResult, NumberStyles.Float, CultureInfo.InvariantCulture, out var enteredValue))
+		{
+			if (enteredValue < 0)
+			{
+				// TODO: maybe dynamic string
+				currentValue = 0f;
+				currentString = "0";
+			}
+			else if (enteredValue >= 100)
+			{
+				currentValue = 1f;
+				currentString = "100";
+			}
+			else
+			{
+				// truncate string if it contains a decimal and decimal is longer than one digit
+				var decimalPointIndex = textFieldResult.IndexOf('.');
+				if (decimalPointIndex != -1 && decimalPointIndex < textFieldResult.Length - 1)
+				{
+					currentString = textFieldResult.Substring(0, decimalPointIndex + 2);
+					currentValue = float.Parse(currentString, CultureInfo.InvariantCulture) / 100f;
+				}
+				else
+				{
+					currentValue = enteredValue / 100f;
+					currentString = textFieldResult;
+				}
+			}
 		}
 
+		//draw xenotype label
 		Text.Anchor = previousAlignment;
 		listing.Label(label, tooltip: tooltip);
-		return Mathf.RoundToInt(listing.Slider(currentValue, min, max));
+		
+		return (Mathf.RoundToInt(listing.Slider(currentValue * 1000, 0, 1000)), currentString);
 	}
 
 	public static bool SelectionButton(this Listing_Standard listing, string label, bool active)
