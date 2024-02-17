@@ -46,8 +46,8 @@ public partial class ModifiableXenotype
 
 			papaCustomXenotype
 				= (papaXenotypeSet == XenotypeDefOf.Baseliner || papaXenotypeSet == null)
-				&& xenotypeChances.CustomXenotypes.TryRandomElementByWeight(tuple
-					=> tuple.Chance.RawValue, out var customXenotypeChance)
+				&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
+					=> chance.RawValue, out var customXenotypeChance)
 				? customXenotypeChance.Xenotype.CustomXenotype
 				: null;
 
@@ -68,8 +68,8 @@ public partial class ModifiableXenotype
 
 			var mamaCustomXenotype
 				= (mamaXenotypeSet == XenotypeDefOf.Baseliner || mamaXenotypeSet == null)
-				&& xenotypeChances.CustomXenotypes.TryRandomElementByWeight(tuple
-					=> tuple.Xenotype.CustomXenotype == papaCustomXenotype ? 0 : tuple.Chance.RawValue, out var customXenotypeChance)
+				&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
+					=> chance.Xenotype.CustomXenotype == papaCustomXenotype ? 0 : chance.RawValue, out var customXenotypeChance)
 				? customXenotypeChance.Xenotype.CustomXenotype
 				: null;
 

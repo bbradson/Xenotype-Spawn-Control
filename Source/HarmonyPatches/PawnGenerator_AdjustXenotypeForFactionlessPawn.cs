@@ -20,8 +20,8 @@ public static class PawnGenerator_AdjustXenotypeForFactionlessPawn
 		var customXenotypeChanceSum = xenotypeChances.GetCustomXenotypeChanceSum() * 2f;
 
 		if (Rand.Range(0f, premadeXenotypeChanceSum + customXenotypeChanceSum) <= customXenotypeChanceSum
-			&& xenotypeChances.CustomXenotypes.TryRandomElementByWeight(tuple
-				=> tuple.Chance.RawValue, out var result))
+			&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
+				=> chance.RawValue, out var result))
 		{
 			request.ForcedCustomXenotype = result.Xenotype.CustomXenotype;
 			xenotype = XenotypeDefOf.Baseliner;

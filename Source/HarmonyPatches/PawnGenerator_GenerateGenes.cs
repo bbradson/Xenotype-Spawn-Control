@@ -3,6 +3,8 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Linq;
+
 namespace XenotypeSpawnControl.HarmonyPatches;
 
 [HarmonyPatch(typeof(PawnGenerator), nameof(PawnGenerator.GenerateGenes))]
@@ -70,9 +72,9 @@ public class PawnGenerator_GenerateGenes
 		var xenotypeChances = XenotypeChanceDatabase<T>.For(defName);
 
 		if (Rand.Range(0f, 1f) > xenotypeChances.GetBaselinerChance()
-			&& xenotypeChances.AllActiveXenotypes.Count > 0)
+			&& xenotypeChances.CustomXenotypeChances.Any())
 		{
-			xenotypeChances.CustomXenotypes.TryRandomElementByWeight(tuple => tuple.Chance.RawValue, out var randomResult);
+			xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance => chance.RawValue, out var randomResult);
 			if (randomResult.Xenotype?.Def != XenotypeDefOf.Baseliner && randomResult.Xenotype?.CustomXenotype != null)
 			{
 				result = randomResult.Xenotype is ModifiableXenotype.Generated xenotypeGenerator

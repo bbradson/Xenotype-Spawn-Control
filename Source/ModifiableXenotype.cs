@@ -3,6 +3,8 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Linq;
+
 namespace XenotypeSpawnControl;
 
 public partial class ModifiableXenotype
@@ -13,15 +15,21 @@ public partial class ModifiableXenotype
 	public XenotypeDef? Def { get; }
 	public CustomXenotype? CustomXenotype { get; }
 
+	public IEnumerable<GeneDef> xenotypeGenes;
+
+	public bool IsArchite => xenotypeGenes.Any(gene => gene.biostatArc > 0);
+
 	public ModifiableXenotype(XenotypeDef def)
 	{
 		Def = def;
 		Name = def.defName;
+		xenotypeGenes = def.AllGenes;
 	}
 
 	public ModifiableXenotype(CustomXenotype customXenotype)
 	{
 		CustomXenotype = customXenotype;
 		Name = customXenotype.name;
+		xenotypeGenes = CustomXenotype.genes;
 	}
 }

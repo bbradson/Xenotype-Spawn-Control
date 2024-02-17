@@ -33,6 +33,8 @@ public static class Strings
 		public static string Edit = "edit";
 		public static string ConfirmReset = "ConfirmResetXenotypeSpawnControl";
 
+		public static string AllowArchiteXenotypes = "AllowArchiteXenotypes";
+
 		static Translated()
 			=> TranslateAllFields(typeof(Translated));
 

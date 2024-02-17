@@ -25,8 +25,7 @@ public static class XenotypeChanceDatabase<T> where T : Def
 	{
 		if (Scribe.mode == LoadSaveMode.Saving
 			&& !_allValues.Any(pair
-				=> pair.Value.AllSavedValues.Any(pair
-					=> !pair.Value.IsDefaultValue)))
+				=> pair.Value.RequiresSaving()))
 		{
 			return;
 		}

@@ -143,33 +143,40 @@ public static class ModSettingsWindow
 			using var listingScope = new ScrollableListingScope(outRect, _xenotypeScrollViewStatus, Listing);
 
 			var xenotypeChances = XenotypeChanceDatabase<T>.For(_currentlySelectedDefName);
-			foreach (var xenotypeChance in xenotypeChances.AllSavedValues.OrderBy(pair => pair.Key))
-			{
-				if (!xenotypeChances.AllActiveXenotypes.TryGetValue(xenotypeChance.Key, out var modifiableXenotype))
-				{
-					InactiveLabel(Listing, xenotypeChance.Key.CapitalizeFirst(), xenotypeChance.Value);
-					continue;
-				}
 
-				var (ChanceValue, ChanceString) = Listing.FloatBoxSlider(modifiableXenotype.Xenotype.Label,
-					 modifiableXenotype.Chance.ChanceString, modifiableXenotype.Chance.Value, modifiableXenotype.Xenotype.Tooltip);
-				var chanceModified = ChanceValue != modifiableXenotype.Chance.RawValue;
-				var sliderStringModified = modifiableXenotype.Chance.ChanceString != ChanceString;
+			//ref of property is not allowed, remember here instead
+			var architeCheckboxResult = xenotypeChances.AllowArchiteXenotypes;
+			Listing.CheckboxLabeled(Strings.Translated.AllowArchiteXenotypes, ref architeCheckboxResult);
+			xenotypeChances.AllowArchiteXenotypes = architeCheckboxResult;
+
+			//first show all INACTIVE xenotypes
+			foreach (var unloadedXenotypeKeyValuePair in xenotypeChances.UnloadedXenotypes.OrderBy(unloaded => unloaded.Key))
+			{
+				InactiveLabel(Listing, unloadedXenotypeKeyValuePair.Key.CapitalizeFirst(), unloadedXenotypeKeyValuePair.Value.RawChanceValue);
+			}
+
+			//then show all configurable xenotypes
+			foreach (var xenotypeChance in xenotypeChances.AllAllowedXenotypeChances.OrderBy(xenotypeChance => xenotypeChance.Xenotype.Label))
+			{
+				var (ChanceValue, ChanceString) = Listing.FloatBoxSlider(xenotypeChance.Xenotype.Label + " (" + xenotypeChance.Xenotype.Name + ")",
+					 xenotypeChance.ChanceString, xenotypeChance.Value, xenotypeChance.Xenotype.Tooltip);
+				var chanceModified = ChanceValue != xenotypeChance.RawValue;
+				var sliderStringModified = xenotypeChance.ChanceString != ChanceString;
 
 				if (chanceModified)
 				{
-					xenotypeChances.SetChanceForXenotype(xenotypeChance.Key, ChanceValue);
+					xenotypeChances.SetChanceForXenotype(xenotypeChance.Xenotype, ChanceValue, true);
 				}
 				// if chance string has been changed via textbox use it's value instead
 				if (sliderStringModified)
-					modifiableXenotype.Chance.ChanceString = ChanceString;
+					xenotypeChance.ChanceString = ChanceString;
 			}
 
 			if (Listing.ButtonText(Strings.Translated.Reset))
 				xenotypeChances.Reset();
 		}
 
-		private static void InactiveLabel(Listing_Standard listing, string xenotypeName, XenotypeChances<T>.Chance? savedValue)
+		private static void InactiveLabel(Listing_Standard listing, string xenotypeName, int savedChanceRawValue)
 		{
 			var inactiveRect = listing.GetRect(Text.CalcHeight($"{Strings.Translated.Inactive}: ", listing.ColumnWidth) + Listing_Standard.PinnableActionHeight + (listing.verticalSpacing * 2f));
 			var currentColor = GUI.color;
@@ -180,7 +187,7 @@ public static class ModSettingsWindow
 				ModifiableXenotypeDatabase.RemoveCustomXenotype(xenotypeName);
 			listing.curY -= inactiveRect.height;
 
-			listing.Label($"{Strings.Translated.Inactive}: {xenotypeName}, {(savedValue?.RawValue ?? 0) / 10m}%");
+			listing.Label($"{Strings.Translated.Inactive}: {xenotypeName}, {savedChanceRawValue / 10m}%");
 			listing.Gap(Listing_Standard.PinnableActionHeight + listing.verticalSpacing);
 		}
 	}

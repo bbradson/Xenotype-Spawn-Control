@@ -108,12 +108,8 @@ public static class XenotypeChanceDatabases
 			foreach (var def in Defs)
 			{
 				var xenotypeChances = XenotypeChanceDatabase<T>.For(def.defName);
-				var hasValues = xenotypeChances.AllSavedValues.Count != 0;
 
 				xenotypeChances.Initialize();
-
-				if (hasValues)
-					xenotypeChances.SetAllValues();
 			}
 		}
 
