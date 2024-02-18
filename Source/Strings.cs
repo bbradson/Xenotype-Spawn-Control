@@ -35,6 +35,8 @@ public static class Strings
 
 		public static string AllowArchiteXenotypes = "AllowArchiteXenotypes";
 
+		public static string CustomHint = "CustomHint";
+
 		static Translated()
 			=> TranslateAllFields(typeof(Translated));
 

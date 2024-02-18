@@ -11,4 +11,5 @@
 	<edit>edit</edit>
 	<ConfirmResetXenotypeSpawnControl>Really reset all Xenotype Spawn Control settings?</ConfirmResetXenotypeSpawnControl>
 	<AllowArchiteXenotypes>Allow Archite Xenotypes</AllowArchiteXenotypes>
+	<CustomHint>custom</CustomHint>
 </LanguageData>

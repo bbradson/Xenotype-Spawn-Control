@@ -40,7 +40,11 @@ public static class ModifiableXenotypeDatabase
 
 	public static void RemoveCustomXenotype(string name)
 	{
-		AllValues.Remove(name);
+		//if custom xenotype overrides premade xenotype enable premade one instead
+		if (DefDatabase<XenotypeDef>.AllDefsListForReading.FirstOrDefault(def => def.defName == name) is {} def)
+			AllValues[def.defName] = new(def);
+		else
+			AllValues.Remove(name);
 		CustomXenotypes.Remove(name);
 		XenotypeChanceDatabases.RemoveCustomXenotype(name);
 	}
@@ -84,6 +88,13 @@ public static class ModifiableXenotypeDatabase
 	{
 		if (Array.IndexOf(InvalidNames, xenotype.name) >= 0)
 			return null;
+
+		//forbid adding baseliner custom xenotype
+		if (xenotype.name == XenotypeDefOf.Baseliner.defName)
+		{
+			//TODO:maybe add some kind of warning that baseliner won't be overridden
+			return null;
+		}
 
 		var modifiableXenotype = new ModifiableXenotype(xenotype);
 		AddModifiableXenotype(modifiableXenotype);

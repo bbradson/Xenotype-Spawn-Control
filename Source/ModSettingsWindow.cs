@@ -3,6 +3,7 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.ComponentModel;
 using System.Linq;
 using Verse;
 using XenotypeSpawnControl.GUIExtensions;
@@ -158,7 +159,7 @@ public static class ModSettingsWindow
 			//then show all configurable xenotypes
 			foreach (var xenotypeChance in xenotypeChances.AllAllowedXenotypeChances.OrderBy(xenotypeChance => xenotypeChance.Xenotype.Label))
 			{
-				var (ChanceValue, ChanceString) = Listing.FloatBoxSlider(xenotypeChance.Xenotype.Label + " (" + xenotypeChance.Xenotype.Name + ")",
+				var (ChanceValue, ChanceString) = Listing.FloatBoxSlider(xenotypeChance.Xenotype.Label + " (" + (xenotypeChance.Xenotype.CustomXenotype is null || xenotypeChance.Xenotype is ModifiableXenotype.Generated ? xenotypeChance.Xenotype.Name : Strings.Translated.CustomHint) + ")",
 					 xenotypeChance.ChanceString, xenotypeChance.Value, xenotypeChance.Xenotype.Tooltip);
 				var chanceModified = ChanceValue != xenotypeChance.RawValue;
 				var sliderStringModified = xenotypeChance.ChanceString != ChanceString;

@@ -232,8 +232,7 @@ public class XenotypeChances<T> : IExposable where T : Def
 		if (xenotypeChance != null)
 		{
 			//update xenotype
-			Log.Error(xenotype.Name);
-			xenotypeChance.Xenotype = xenotype;
+			SwitchXenotypeOfXenotypeChance(xenotypeChance, xenotype);
 		}
 		else
 		{
@@ -248,49 +247,26 @@ public class XenotypeChances<T> : IExposable where T : Def
 			AllLoadedXenotypeChances[xenotype.Name] = xenotypeChance;
 			InitializeDefaultValueForXenotypeChance(xenotypeChance);
 
-			//set chance as well if we had a value loaded, except if it is baseliner, since we want to derive that value
-			if (hadConfig && xenotype.Def != XenotypeDefOf.Baseliner)
-				SetChanceForXenotype(xenotype, AllAllowedXenotypeChances.Contains(xenotypeChance) ? AllLoadedXenotypeChances[xenotype.Name].RawValue : 0, true);
-		}
-
-		if (xenotypeChance.Xenotype.CustomXenotype != null)
-		{
-			//try to disable xenotype if a custom xenotype with identical name was created
-			TryDisableXenotypeDefOfMatchingName(xenotype.Name);
+			//ensure a value gets set if xenotype was added after initialization
+			if (_initialized)
+				SetInitialValueForXenotypeChance(xenotypeChance);
 		}
 
 		return xenotypeChance;
 	}
 
-	private void TryDisableXenotypeDefOfMatchingName(string defName)
+	private void SwitchXenotypeOfXenotypeChance(XenotypeChance xenotypeChance, ModifiableXenotype newXenotype)
 	{
-		var defNameLowered = defName.ToLower();
-		for (var i = 0; i < DefDatabase<XenotypeDef>.AllDefsListForReading.Count; i++)
-		{
-			var def = DefDatabase<XenotypeDef>.AllDefsListForReading[i];
-
-			if (def == XenotypeDefOf.Baseliner)
-				continue;
-
-			if (def.defName.ToLower() != defNameLowered)
-				continue;
-
-			if (def.defName != defNameLowered)
-				Remove(defName);
-
-			if (Def is { } tDef
-				&& GetXenotypeSet(tDef)?.xenotypeChances is { } xenotypeChances)
-			{
-				for (var j = 0; j < xenotypeChances.Count; j++)
-				{
-					if (xenotypeChances[j].xenotype == def)
-					{
-						xenotypeChances.Remove(xenotypeChances[j]);
-						return;
-					}
-				}
-			}
-		}
+		//do not allow switching chance for baseliner
+		if(xenotypeChance.Xenotype.Def == XenotypeDefOf.Baseliner)
+			return;
+		var originalChanceValue = xenotypeChance.RawValue;
+		//first set chance of original xenotype to 0
+		SetChanceForXenotype(xenotypeChance.Xenotype, 0, false);
+		//then switch xenotype
+		xenotypeChance.Xenotype = newXenotype;
+		//finally set chance for new xenotype to original value
+		SetChanceForXenotype(newXenotype, originalChanceValue, false);
 	}
 
 	private XenotypeChance? TryAddXenotype(string defName)
@@ -298,13 +274,21 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	private string GetNameFromDatabase() => XenotypeChanceDatabase<T>.From(this);
 
+	private bool _initialized = false;
 	public void Initialize()
 	{
 		foreach (var xenotype in ModifiableXenotypeDatabase.AllValues)
 			GetOrAddXenotypeAndChance(xenotype.Key);
 		
+		foreach (var xenotype in AllLoadedXenotypeChances.Values)
+			SetInitialValueForXenotypeChance(xenotype);
 		//this flag may have been falsely set during initialization
-		_distributeAmongAllXenotypes = false;
+		_initialized = false;
+	}
+
+	private void SetInitialValueForXenotypeChance(XenotypeChance xenotypeChance)
+	{
+		SetChanceForXenotype(xenotypeChance.Xenotype, AllAllowedXenotypeChances.Contains(xenotypeChance) ? AllLoadedXenotypeChances[xenotypeChance.Xenotype.Name].RawValue : 0, _initialized);
 	}
 
 	private void InitializeDefaultValueForXenotypeChance(XenotypeChance xenotypeChance)
@@ -338,10 +322,7 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	private void SetDefaultValueForXenotypeChance(XenotypeChance xenotypeChance, float normalizedValue)
 	{
-		var wasDefault = xenotypeChance.IsDefaultValue;
 		xenotypeChance.DefaultValue = normalizedValue;
-		if (wasDefault)
-			SetChanceForXenotype(xenotypeChance.Xenotype, AllAllowedXenotypeChances.Contains(xenotypeChance) ? Mathf.RoundToInt(xenotypeChance.DefaultValue * 1000) : 0, true);
 	}
 
 	public void Reset()
@@ -372,12 +353,20 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	public void Remove(string defName)
 	{
-		//remove xenotype from the config as well
-		_currentConfig.XenotypeChances.Remove(defName);
-
-		if (AllLoadedXenotypeChances.Remove(defName))
+		//if a premade xenotype was overridden switch back to it, else remove it entirely
+		if (ModifiableXenotypeDatabase.AllValues.TryGetValue(defName, out var premadeXenotype))
 		{
-			UpdateBaselinerChanceValue();
+			SwitchXenotypeOfXenotypeChance(AllLoadedXenotypeChances[defName], premadeXenotype);
+		}
+		else
+		{
+			//remove xenotype from the config as well
+			_currentConfig.XenotypeChances.Remove(defName);
+
+			if (AllLoadedXenotypeChances.Remove(defName))
+			{
+				UpdateBaselinerChanceValue();
+			}
 		}
 	}
 
