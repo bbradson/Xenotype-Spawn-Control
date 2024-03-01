@@ -9,60 +9,137 @@ using Verse.Sound;
 namespace XenotypeSpawnControl.GUIExtensions;
 public static class Listing_StandardExtensions
 {
-	public static (int ChanceValue, string ChanceString) FloatBoxSlider(this Listing_Standard listing, string label, string currentString, float currentValue, string? tooltip = null)
+	public static void XenotypeChanceDisplay<T>(this Listing_Standard listing, XenotypeChances<T> xenotypeChancesSet, XenotypeChance xenotypeChance) where T : Def
 	{
+		var isAbsolute = xenotypeChance.IsAbsolute;
+		(float Value, string String) absoluteChance = (xenotypeChance.Value, xenotypeChance.ChanceString);
+		(float Value, string String) weightedChance = (xenotypeChance.Weight, xenotypeChance.WeightString);
 		//remember previous text alignment
 		var previousAlignment = Text.Anchor;
 		Text.Anchor = TextAnchor.MiddleRight;
 
-		var percentageSize = Text.CalcSize("%");
-		//draw percentage Label
-		Widgets.Label(new(0f, listing.curY, listing.ColumnWidth, percentageSize.y), "%");
-		//draw percentage string
-		var textFieldSize = Text.CalcSize("77.77)");
-		var textFieldResult = Widgets.TextField(new(listing.ColumnWidth - textFieldSize.x - percentageSize.x, listing.curY, textFieldSize.x, textFieldSize.y), currentString);
-		// sanitize entered percentage
-		if (textFieldResult.NullOrEmpty() || textFieldResult == ".")
+		if (isAbsolute)
 		{
-			currentValue = 0f;
-			currentString = textFieldResult;
+			var percentageSize = Text.CalcSize("%");
+			//draw percentage Label
+			Widgets.Label(new(0f, listing.curY, listing.ColumnWidth, percentageSize.y), "%");
+			//draw percentage string
+			var textFieldSize = Text.CalcSize("77.77)");
+			var textFieldResult = Widgets.TextField(new(listing.ColumnWidth - textFieldSize.x - percentageSize.x, listing.curY, textFieldSize.x, textFieldSize.y), absoluteChance.String);
+			// sanitize entered percentage
+			if (textFieldResult.NullOrEmpty() || textFieldResult == ".")
+			{
+				absoluteChance.Value = 0f;
+				absoluteChance.String = textFieldResult;
 			
-		}
-		else if (float.TryParse(textFieldResult, NumberStyles.Float, CultureInfo.InvariantCulture, out var enteredValue))
-		{
-			if (enteredValue < 0)
-			{
-				// TODO: maybe dynamic string
-				currentValue = 0f;
-				currentString = "0";
 			}
-			else if (enteredValue >= 100)
+			else if (float.TryParse(textFieldResult, NumberStyles.Float, CultureInfo.InvariantCulture, out var enteredValue))
 			{
-				currentValue = 1f;
-				currentString = "100";
-			}
-			else
-			{
-				// truncate string if it contains a decimal and decimal is longer than one digit
-				var decimalPointIndex = textFieldResult.IndexOf('.');
-				if (decimalPointIndex != -1 && decimalPointIndex < textFieldResult.Length - 1)
+				if (enteredValue < 0)
 				{
-					currentString = textFieldResult.Substring(0, decimalPointIndex + 2);
-					currentValue = float.Parse(currentString, CultureInfo.InvariantCulture) / 100f;
+					absoluteChance.Value = 0f;
+					absoluteChance.String = "0";
+				}
+				else if (enteredValue >= 100)
+				{
+					absoluteChance.Value = 1f;
+					absoluteChance.String = "100";
 				}
 				else
 				{
-					currentValue = enteredValue / 100f;
-					currentString = textFieldResult;
+					// truncate string if it contains a decimal and decimal is longer than one digit
+					var decimalPointIndex = textFieldResult.IndexOf('.');
+					if (decimalPointIndex != -1 && decimalPointIndex < textFieldResult.Length - 1)
+					{
+						absoluteChance.String = textFieldResult.Substring(0, decimalPointIndex + 2);
+						absoluteChance.Value = float.Parse(absoluteChance.String, CultureInfo.InvariantCulture) / 100f;
+					}
+					else
+					{
+						absoluteChance.Value = enteredValue / 100f;
+						absoluteChance.String = textFieldResult;
+					}
 				}
 			}
+		}
+		else
+		{
+			//draw percentage Label
+			var percentageSize = Text.CalcSize("|77.7%");
+			Widgets.Label(new(0f, listing.curY, listing.ColumnWidth, percentageSize.y), absoluteChance.String + "%");
+			//draw weight textbox
+			var textFieldSize = Text.CalcSize("77.77)");
+			textFieldSize.x = Math.Max(textFieldSize.x, Text.CalcSize(weightedChance.String + ")").x);
+			var textFieldResult = Widgets.TextField(new(listing.ColumnWidth - textFieldSize.x - percentageSize.x, listing.curY, textFieldSize.x, textFieldSize.y), weightedChance.String);
+			// sanitize entered value
+			InterpretWeightString(ref weightedChance, textFieldResult);
 		}
 
 		//draw xenotype label
 		Text.Anchor = previousAlignment;
-		listing.Label(label, tooltip: tooltip);
-		
-		return (Mathf.RoundToInt(listing.Slider(currentValue * 1000, 0, 1000)), currentString);
+		listing.Label(xenotypeChance.Xenotype.DisplayLabel, tooltip: xenotypeChance.Xenotype.Tooltip);
+
+		//draw a slider with a checkbox to switch chance mode next to it
+		var checkBoxSize = Widgets.CheckboxSize;
+		var previousColumnWidth = listing.ColumnWidth;
+		listing.ColumnWidth = checkBoxSize;
+		listing.curX += previousColumnWidth - checkBoxSize;
+		//cannot create checkbox as widget, or we wouldn't be able to have a tooltip
+		listing.CheckboxLabeled(string.Empty, ref isAbsolute, Strings.Translated.IndividualAbsoluteModeToggleTooltip);
+		listing.curX -= previousColumnWidth - checkBoxSize;
+		listing.ColumnWidth = previousColumnWidth;
+
+		listing.curY -= checkBoxSize;
+		listing.ColumnWidth -= checkBoxSize;
+		var sliderResult = listing.Slider(absoluteChance.Value, 0, 1);
+		if (isAbsolute)
+			absoluteChance.Value = sliderResult;
+		listing.ColumnWidth += checkBoxSize;
+
+		listing.Gap(2);
+
+		//apply changes
+		var isAbsoluteModified = xenotypeChance.IsAbsolute != isAbsolute;
+		var chanceValueModified = isAbsolute && xenotypeChance.Value != absoluteChance.Value;
+		var chanceStringModified = xenotypeChance.ChanceString != absoluteChance.String;
+		var weightModified = !isAbsolute && xenotypeChance.Weight != weightedChance.Value;
+		var weightStringModified = xenotypeChance.WeightString != weightedChance.String;
+		if(isAbsoluteModified)
+			xenotypeChancesSet.SetIsAbsoluteForXenotypeChance(xenotypeChance, isAbsolute);
+		if (chanceValueModified)
+			xenotypeChance.Value = absoluteChance.Value;
+		if (weightModified)
+			xenotypeChance.Weight = weightedChance.Value;
+		if (chanceValueModified || weightModified)
+			xenotypeChancesSet.SetXenotypeChance(xenotypeChance, true);
+		if (chanceStringModified)
+			xenotypeChance.ChanceString = absoluteChance.String;
+		if (weightStringModified)
+			xenotypeChance.WeightString = weightedChance.String;
+	}
+
+	//TODO: move this to an appropiate place and make it look nice
+	public static void InterpretWeightString(ref (float Value, string String) weight, string text)
+	{
+		if (text.NullOrEmpty() || text == ".")
+		{
+			weight.Value = 0f;
+			weight.String = text;
+		}
+		else if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var enteredValue))
+		{
+			if (enteredValue < 0)
+			{
+				weight.Value = 0f;
+				weight.String = "0";
+			}
+			else
+			{
+				//do not truncate weights, might cause issues
+				weight.Value = enteredValue;
+				weight.String = text;
+			}
+		}
 	}
 
 	public static bool SelectionButton(this Listing_Standard listing, string label, bool active)
@@ -82,5 +159,25 @@ public static class Listing_StandardExtensions
 		rect.xMax -= 5f;
 		Widgets.Label(rect, label);
 		return active;
+	}
+
+	public static (bool Clicked, string Text) TextBoxButton(this Listing_Standard listing, string label, string text)
+	{
+		var textFieldSize = Text.CalcSize("77.77)");
+		textFieldSize.x = Math.Max(textFieldSize.x, Text.CalcSize(text + ")").x);
+
+		var listingInititialY = listing.curY;
+		//add a small margin as well
+		var buttonMargin = 2;
+		listing.ColumnWidth -= textFieldSize.x + buttonMargin;
+		var buttonResult = listing.ButtonText(label);
+		listing.ColumnWidth += textFieldSize.x + buttonMargin;
+		//substract the empty space below the button, the CloseButtonMargin might not be the correct button margin, but it works
+		var buttonSize = listing.curY - listingInititialY - Widgets.CloseButtonMargin;
+
+		textFieldSize.y = buttonSize;
+		text = Widgets.TextField(new(listing.ColumnWidth - textFieldSize.x, listingInititialY, textFieldSize.x, textFieldSize.y), text);
+		
+		return (buttonResult, text);
 	}
 }

@@ -11,7 +11,7 @@ public partial class ModifiableXenotype
 {
 	public class Hybrid : Generated
 	{
-		public override string Label => Strings.Translated.Hybrid.CapitalizeFirst();
+		public override string DisplayLabel => Strings.Translated.Hybrid.CapitalizeFirst();
 		public override string? Tooltip => Strings.Translated.HybridTooltip;
 
 		public override CustomXenotype GenerateXenotype<T>(XenotypeChances<T> xenotypeChances)

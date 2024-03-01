@@ -14,8 +14,12 @@ public class XenotypeChancesConfig : IExposable
 public class XenotypeChanceConfig : IExposable
 {
 	public int RawChanceValue = -1000;
+	public bool IsAbsolute = true;
+	public float Weight = 0;
 	public void ExposeData()
 	{
 			Scribe_Values.Look(ref RawChanceValue, "chance", -1000);
+			Scribe_Values.Look(ref IsAbsolute, "isAbsolute", true);
+			Scribe_Values.Look(ref Weight, "weight", 0);
 	}
 }

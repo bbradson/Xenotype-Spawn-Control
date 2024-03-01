@@ -34,6 +34,12 @@ public static class Strings
 		public static string ConfirmReset = "ConfirmResetXenotypeSpawnControl";
 
 		public static string AllowArchiteXenotypes = "AllowArchiteXenotypes";
+		public static string AbsoluteToggle = "AbsoluteToggle";
+		public static string WeightedToggle = "WeightedToggle";
+		public static string WeightSetterButton = "WeightSetterButton";
+		public static string WeightDistrubutionHint = "WeightDistrubutionHint";
+		public static string NoWeightedHint = "NoWeightedHint";
+		public static string IndividualAbsoluteModeToggleTooltip = "IndividualAbsoluteModeToggleTooltip";
 
 		public static string CustomHint = "CustomHint";
 

@@ -4,7 +4,9 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
+using UnityEngine.UIElements;
 using Verse;
 using XenotypeSpawnControl.GUIExtensions;
 
@@ -19,16 +21,16 @@ public static class ModSettingsWindow
 			Title = Strings.Translated.Factions,
 			Defs = DefDatabase<FactionDef>.AllDefs.Where(faction => faction.humanlikeFaction)
 		},
-		new Tab<PawnKindDef>
-		{
-			Title = Strings.Translated.PawnKinds,
-			Defs = DefDatabase<PawnKindDef>.AllDefs.Where(p => p.RaceProps is { } props && props.Humanlike)
-		},
 		new Tab<MemeDef>
 		{
 			RequirementsMet = ModsConfig.IdeologyActive,
 			Title = Strings.Translated.Memes,
 			Defs = DefDatabase<MemeDef>.AllDefs
+		},
+		new Tab<PawnKindDef>
+		{
+			Title = Strings.Translated.PawnKinds,
+			Defs = DefDatabase<PawnKindDef>.AllDefs.Where(p => p.RaceProps is { } props && props.Humanlike)
 		},
 		new EditorTab
 		{
@@ -98,7 +100,7 @@ public static class ModSettingsWindow
 		public IEnumerable<ModifiableXenotype> Xenotypes { get; set; }
 			= ModifiableXenotypeDatabase.AllValues.Values;
 
-		public Listing_Standard Listing { get; } = new() { verticalSpacing = 4f };
+		//public Listing_Standard Listing { get; } = new() { verticalSpacing = 4f };
 
 		private string? _currentlySelectedDefName;
 		private ScrollViewStatus _defScrollViewStatus = new();
@@ -107,14 +109,16 @@ public static class ModSettingsWindow
 		public override void DoWindowContents(Rect inRect)
 		{
 			var leftHalfRect = inRect.LeftHalf();
+			var rightHalfRect = inRect.RightHalf();
 			leftHalfRect.width -= 20f;
 			ListDefs(leftHalfRect);
-			ListXenotypes(inRect.RightHalf());
+			ListXenotypes(rightHalfRect);
 		}
 
 		public void ListDefs(Rect outRect)
 		{
-			using var listingScope = new ScrollableListingScope(outRect, _defScrollViewStatus, Listing);
+			using var listingScope = new ScrollableListingScope(outRect, _defScrollViewStatus, new() { verticalSpacing = 4f });
+			var listing = listingScope.Listing;
 
 			foreach (var def in Defs.OrderBy(def => def.defName))
 			{
@@ -125,13 +129,13 @@ public static class ModSettingsWindow
 				//if (factionDefName.Length > LINE_MAX)
 				//	factionDefName = factionDefName.Substring(0, LINE_MAX) + "...";
 
-				if (Listing.SelectionButton(def.LabelCap + " (" + defName + ")", _currentlySelectedDefName == defName))
+				if (listing.SelectionButton(def.LabelCap + " (" + defName + ")", _currentlySelectedDefName == defName))
 					_currentlySelectedDefName = defName;
 			}
 
 			if (typeof(T) == typeof(FactionDef))
 			{
-				if (Listing.SelectionButton(Strings.Translated.NoFaction, _currentlySelectedDefName == Strings.NoFactionKey))
+				if (listing.SelectionButton(Strings.Translated.NoFaction, _currentlySelectedDefName == Strings.NoFactionKey))
 					_currentlySelectedDefName = Strings.NoFactionKey;
 			}
 		}
@@ -141,40 +145,74 @@ public static class ModSettingsWindow
 			if (_currentlySelectedDefName is null)
 				return;
 
-			using var listingScope = new ScrollableListingScope(outRect, _xenotypeScrollViewStatus, Listing);
+			using var listingScope = new ScrollableListingScope(outRect, _xenotypeScrollViewStatus, new() { verticalSpacing = 4f });
+			var listing = listingScope.Listing;
 
 			var xenotypeChances = XenotypeChanceDatabase<T>.For(_currentlySelectedDefName);
 
 			//ref of property is not allowed, remember here instead
 			var architeCheckboxResult = xenotypeChances.AllowArchiteXenotypes;
-			Listing.CheckboxLabeled(Strings.Translated.AllowArchiteXenotypes, ref architeCheckboxResult);
+			listing.CheckboxLabeled(Strings.Translated.AllowArchiteXenotypes, ref architeCheckboxResult);
 			xenotypeChances.AllowArchiteXenotypes = architeCheckboxResult;
+
+			XenotypeChancesTypeButtons(listing, xenotypeChances);
+
+			SetAllWeightsButton(listing, xenotypeChances);
+
+			//hint to notify user about the total chance of weighted xenotypes
+			listing.Label(xenotypeChances.OnlyAbsoluteChancesAllowed ? Strings.Translated.NoWeightedHint : Strings.Translated.WeightDistrubutionHint + " " + (xenotypeChances.GetRawWeightedDistrubutionChance() / 10f).ToString("##0.#", CultureInfo.InvariantCulture) + "%");
+
+			listing.GapLine();
 
 			//first show all INACTIVE xenotypes
 			foreach (var unloadedXenotypeKeyValuePair in xenotypeChances.UnloadedXenotypes.OrderBy(unloaded => unloaded.Key))
 			{
-				InactiveLabel(Listing, unloadedXenotypeKeyValuePair.Key.CapitalizeFirst(), unloadedXenotypeKeyValuePair.Value.RawChanceValue);
+				InactiveLabel(listing, unloadedXenotypeKeyValuePair.Key.CapitalizeFirst(), unloadedXenotypeKeyValuePair.Value.RawChanceValue);
 			}
 
 			//then show all configurable xenotypes
-			foreach (var xenotypeChance in xenotypeChances.AllAllowedXenotypeChances.OrderBy(xenotypeChance => xenotypeChance.Xenotype.Label))
+			foreach (var xenotypeChance in xenotypeChances.AllAllowedXenotypeChances.OrderBy(xenotypeChance => xenotypeChance.Xenotype.DisplayLabel))
 			{
-				var (ChanceValue, ChanceString) = Listing.FloatBoxSlider(xenotypeChance.Xenotype.Label + " (" + (xenotypeChance.Xenotype.CustomXenotype is null || xenotypeChance.Xenotype is ModifiableXenotype.Generated ? xenotypeChance.Xenotype.Name : Strings.Translated.CustomHint) + ")",
-					 xenotypeChance.ChanceString, xenotypeChance.Value, xenotypeChance.Xenotype.Tooltip);
-				var chanceModified = ChanceValue != xenotypeChance.RawValue;
-				var sliderStringModified = xenotypeChance.ChanceString != ChanceString;
-
-				if (chanceModified)
-				{
-					xenotypeChances.SetChanceForXenotype(xenotypeChance.Xenotype, ChanceValue, true);
-				}
-				// if chance string has been changed via textbox use it's value instead
-				if (sliderStringModified)
-					xenotypeChance.ChanceString = ChanceString;
+				listing.XenotypeChanceDisplay(xenotypeChances, xenotypeChance);
 			}
 
-			if (Listing.ButtonText(Strings.Translated.Reset))
+			if (listing.ButtonText(Strings.Translated.Reset))
 				xenotypeChances.Reset();
+		}
+
+		private static void XenotypeChancesTypeButtons(Listing_Standard listing, XenotypeChances<T> xenotypeChances)
+		{
+			var onlyAbsolute = xenotypeChances.OnlyAbsoluteChancesAllowed;
+			var onlyWeighted = xenotypeChances.OnlyWeightedChancesAllowed;
+
+			var drawDoubleButton = !onlyAbsolute && !onlyWeighted;
+			var listingButtonY = listing.curY;
+			if (drawDoubleButton)
+				listing.ColumnWidth /= 2;
+			if (!onlyAbsolute && listing.ButtonText(Strings.Translated.AbsoluteToggle))
+				xenotypeChances.SetIsAbsoluteForAllowed(true);
+			if (drawDoubleButton)
+			{
+				listing.curX += listing.ColumnWidth;
+				listing.curY = listingButtonY;
+			}
+			if (!onlyWeighted && listing.ButtonText(Strings.Translated.WeightedToggle))
+				xenotypeChances.SetIsAbsoluteForAllowed(false);
+			if (drawDoubleButton)
+			{
+				listing.curX -= listing.ColumnWidth;
+				listing.ColumnWidth *= 2;
+			}
+		}
+
+		private (float Value, string String) _allWeightSetterValue = (1, "1");
+
+		private void SetAllWeightsButton(Listing_Standard listing, XenotypeChances<T> xenotypeChances)
+		{
+			var weightsButtonResult = listing.TextBoxButton(Strings.Translated.WeightSetterButton, _allWeightSetterValue.String);
+			Listing_StandardExtensions.InterpretWeightString(ref _allWeightSetterValue, weightsButtonResult.Text);
+			if(weightsButtonResult.Clicked)
+				xenotypeChances.SetWeightForAllowedWeightedXenotypes(_allWeightSetterValue.Value);
 		}
 
 		private static void InactiveLabel(Listing_Standard listing, string xenotypeName, int savedChanceRawValue)

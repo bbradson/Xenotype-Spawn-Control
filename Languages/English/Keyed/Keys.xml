@@ -11,5 +11,11 @@
 	<edit>edit</edit>
 	<ConfirmResetXenotypeSpawnControl>Really reset all Xenotype Spawn Control settings?</ConfirmResetXenotypeSpawnControl>
 	<AllowArchiteXenotypes>Allow Archite Xenotypes</AllowArchiteXenotypes>
+	<AbsoluteToggle>Set all chances to absolute</AbsoluteToggle>
+	<WeightedToggle>Set all chances to weighted</WeightedToggle>
+	<WeightSetterButton>Set all weights to</WeightSetterButton>
+	<WeightDistrubutionHint>Weighted Xenotypes will get distrubuted among</WeightDistrubutionHint>
+	<NoWeightedHint>No weighted Xenotypes</NoWeightedHint>
+	<IndividualAbsoluteModeToggleTooltip>Toggle whether this Xenotype uses absolute chances</IndividualAbsoluteModeToggleTooltip>
 	<CustomHint>custom</CustomHint>
 </LanguageData>
