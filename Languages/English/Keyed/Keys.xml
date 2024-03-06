@@ -10,7 +10,10 @@
 	<INACTIVE>INACTIVE</INACTIVE>
 	<edit>edit</edit>
 	<ConfirmResetXenotypeSpawnControl>Really reset all Xenotype Spawn Control settings?</ConfirmResetXenotypeSpawnControl>
+	<Templates>Templates</Templates>
+	<NoTemplateHint>No Templates</NoTemplateHint>
 	<AllowArchiteXenotypes>Allow Archite Xenotypes</AllowArchiteXenotypes>
+	<Weight>Weight</Weight>
 	<AbsoluteToggle>Set all chances to absolute</AbsoluteToggle>
 	<WeightedToggle>Set all chances to weighted</WeightedToggle>
 	<WeightSetterButton>Set all weights to</WeightSetterButton>

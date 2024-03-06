@@ -21,6 +21,8 @@ public static class XenotypeChanceDatabases
 		new Generic<MemeDef>()
 	};
 
+	public static Dictionary<string, XenotypeChancesConfig> Templates = new();
+
 	public static void AddModifiableXenotype(ModifiableXenotype xenotype)
 	{
 		foreach (var defType in SupportedDefTypes)
@@ -52,6 +54,8 @@ public static class XenotypeChanceDatabases
 
 	public static void ExposeData()
 	{
+		Scribe_Collections.Look(ref Templates, "Templates", LookMode.Value, LookMode.Deep);
+		Templates ??= new();
 		foreach (var defType in SupportedDefTypes)
 			defType.ExposeData();
 	}

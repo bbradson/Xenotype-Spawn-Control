@@ -33,6 +33,8 @@ public static class Strings
 		public static string Edit = "edit";
 		public static string ConfirmReset = "ConfirmResetXenotypeSpawnControl";
 
+		public static string Templates = "Templates";
+		public static string NoTemplateHint = "NoTemplateHint";
 		public static string AllowArchiteXenotypes = "AllowArchiteXenotypes";
 		public static string AbsoluteToggle = "AbsoluteToggle";
 		public static string WeightedToggle = "WeightedToggle";
@@ -40,6 +42,7 @@ public static class Strings
 		public static string WeightDistrubutionHint = "WeightDistrubutionHint";
 		public static string NoWeightedHint = "NoWeightedHint";
 		public static string IndividualAbsoluteModeToggleTooltip = "IndividualAbsoluteModeToggleTooltip";
+		public static string Weight = "Weight";
 
 		public static string CustomHint = "CustomHint";
 

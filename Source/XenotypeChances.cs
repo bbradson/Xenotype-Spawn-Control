@@ -5,6 +5,8 @@
 
 using System.Globalization;
 using System.Linq;
+using System.Security.Policy;
+using UnityEngine.PlayerLoop;
 
 namespace XenotypeSpawnControl;
 
@@ -68,6 +70,7 @@ public class XenotypeChances<T> : IExposable where T : Def
 	private static float GetXenotypeChanceForEmptyFaction(XenotypeDef xenotypeDef)
 		=> xenotypeDef.factionlessGenerationWeight / 50f;
 
+	//TODO: use actual weights for factionless/check behavior with many xenotypes
 	private static void SetXenotypeChanceForEmptyFaction(XenotypeDef xenotypeDef, int rawChanceValue)
 		=> xenotypeDef.factionlessGenerationWeight
 		= rawChanceValue / 20f;
@@ -117,9 +120,11 @@ public class XenotypeChances<T> : IExposable where T : Def
 			if (xenotypeChance.Xenotype.Def != XenotypeDefOf.Baseliner)
 			{
 				if (adjustIfNecessary)
+				{	
 					EnsureAbsoluteChancesNotExceed100(xenotypeChance);
-				//baseliner chance is derivative, so we need to update it's value manually
-				UpdateBaselinerChanceValue();
+					//baseliner chance is derivative, so we need to update it's value manually
+					UpdateBaselinerChanceValue();
+				}
 			}
 			else if (adjustIfNecessary)
 			{
@@ -240,8 +245,14 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	private void UpdateBaselinerChanceValue()
 	{
-		var othersChance = GetAllowedAbsoluteRawValuesSumExceptBaseliner();
 		var baselinerXenotypeChance = GetOrAddBaselinerXenotypeChance();
+		//we can save recalculating value if baseliner is weighted
+		if (!baselinerXenotypeChance.IsAbsolute)
+		{
+			SetXenotypeChance(baselinerXenotypeChance, false);
+			return;
+		}
+		var othersChance = GetAllowedAbsoluteRawValuesSumExceptBaseliner();
 		if (baselinerXenotypeChance.RawValue + othersChance > 1000 || OnlyAbsoluteChancesAllowed)
 		{
 			baselinerXenotypeChance.RawValue = 1000 - othersChance;
@@ -363,6 +374,10 @@ public class XenotypeChances<T> : IExposable where T : Def
 				chanceConfig = new();
 				_currentConfig.XenotypeChances[xenotype.Name] = chanceConfig;
 			}
+			else if (UnloadedXenotypes.FirstOrDefault(keyValuePair => keyValuePair.Key == xenotype.Name) is {} unloadedXenotype)
+			{
+				RemoveBaselinerAdjustmentForUnloadedXenotype(unloadedXenotype);
+			}
 			xenotypeChance  = new(chanceConfig, xenotype);
 			AllLoadedXenotypeChances[xenotype.Name] = xenotypeChance;
 			InitializeDefaultValueForXenotypeChance(xenotypeChance);
@@ -381,18 +396,12 @@ public class XenotypeChances<T> : IExposable where T : Def
 		if(xenotypeChance.Xenotype.Def == XenotypeDefOf.Baseliner)
 			return;
 		//first set chance of original xenotype to 0
-		var originalIsAbsolute = xenotypeChance.IsAbsolute;
-		var originalChanceValue = originalIsAbsolute ? xenotypeChance.Value : xenotypeChance.Weight;
-		DisableXenotypeChance(xenotypeChance, false);
+		if(Def is not null && xenotypeChance.Xenotype.Def is {} xenotypeDef)
+			SetXenotypeChanceForDef(Def, xenotypeDef, 0);
 		//then switch xenotype
 		xenotypeChance.Xenotype = newXenotype;
 		
 		//finally set chance for new xenotype to original value
-		xenotypeChance.IsAbsolute = originalIsAbsolute;
-		if (originalIsAbsolute)
-			xenotypeChance.Value = originalChanceValue;
-		else
-			xenotypeChance.Weight = originalChanceValue;
 		SetXenotypeChance(xenotypeChance, false);
 	}
 
@@ -402,15 +411,19 @@ public class XenotypeChances<T> : IExposable where T : Def
 	private string GetNameFromDatabase() => XenotypeChanceDatabase<T>.From(this);
 
 	private bool _initialized = false;
+	private bool _baselinerAdjustedForUnloadedDuringInit = false;
 	public void Initialize()
 	{
 		_initialized = false;
 		foreach (var xenotype in ModifiableXenotypeDatabase.AllValues)
 			GetOrAddXenotypeAndChance(xenotype.Key);
-		
+
+		_baselinerAdjustedForUnloadedDuringInit = UnloadedXenotypes.Any() && OnlyAbsoluteChancesAllowed;
+
 		foreach (var xenotype in AllLoadedXenotypeChances.Values)
 			SetInitialValueForXenotypeChance(xenotype);
 		
+		UpdateBaselinerChanceValue();
 		//make sure all chances total up to 100%
 		var allowedAbsolute = GetAllowedAbsoluteXenotypeChances().ToList();
 		if (allowedAbsolute.Sum(xenoChance => xenoChance.RawValue) > 1000)
@@ -431,29 +444,33 @@ public class XenotypeChances<T> : IExposable where T : Def
 		if (Def is null)
 			return;
 		
+		float xenoDefaultValue;
 		if (xenotypeChance.Xenotype.Def == XenotypeDefOf.Baseliner)
 		{
-			//fallback in case we only have the baseliner xenotype (should basically never happen)
-			if (AllLoadedXenotypeChances.Count == 1)
-				xenotypeChance.DefaultValue = 1f;
-			return;
+			//GetBaselinerChance() might give false results, depending on what xenotypes have been unloaded/reloaded TODO:requires further investigation, but should be accurate everywhere else
+			xenoDefaultValue = 1f - ModifiableXenotypeDatabase.AllValues.Where(xenotype => xenotype.Value.Def != XenotypeDefOf.Baseliner).Sum(xenotype => GetDefaultValueFromDef(xenotype.Value));
 		}
-		// be careful default value may exceed 100% or be lower than 0%, so clamping is necessary
-		var xenoDefaultValue
-			= Mathf.Clamp(xenotypeChance.Xenotype.Def is { } xenotypeDef
-			? GetXenotypeChance(Def, xenotypeDef) ?? 0f
-			: xenotypeChance.Xenotype is ModifiableXenotype.Generated generatedXenotype
-			? generatedXenotype.GetDefaultChanceIn(Def)
-			: Def is EmptyFactionDef
-			? 0.02f
-			: 0f, 0f, 1f);
-				
+		else
+		{
+			// be careful default value may exceed 100% or be lower than 0%, so clamping is necessary
+			xenoDefaultValue = GetDefaultValueFromDef(xenotypeChance.Xenotype);
+		}
+
+		//remember to change current value as well, if it was default
+		var wasDefault = xenotypeChance.IsDefault;
 			xenotypeChance.DefaultValue = xenoDefaultValue;
-			
-		//manually calculate default baseliner chance, since GetBaselinerChance can give false results
-		var baselinerDefaultChance = 1f - AllLoadedXenotypeChances.Where(xenoChanceKeyValuePair => xenoChanceKeyValuePair.Value.Xenotype.Def != XenotypeDefOf.Baseliner).Sum(xenoChance => xenoChance.Value.DefaultValue);
-		GetOrAddBaselinerXenotypeChance().DefaultValue = baselinerDefaultChance;
+			if (wasDefault)
+				xenotypeChance.Value = xenotypeChance.DefaultValue;
 	}
+
+	private float GetDefaultValueFromDef(ModifiableXenotype xenotype) => 
+				Mathf.Clamp(xenotype.Def is { } xenotypeDef
+					? GetXenotypeChance(Def, xenotypeDef) ?? 0f
+					: xenotype is ModifiableXenotype.Generated generatedXenotype
+					? generatedXenotype.GetDefaultChanceIn(Def)
+					: Def is EmptyFactionDef
+					? 0.02f
+					: 0f, 0f, 1f);
 
 	public void Reset()
 	{
@@ -476,7 +493,7 @@ public class XenotypeChances<T> : IExposable where T : Def
 	private void ResetToDefaultChance(XenotypeChance xenotypeChance)
 	{
 		xenotypeChance.IsAbsolute = true;
-		if(!xenotypeChance.IsDefaultValue)
+		if(!xenotypeChance.IsDefault)
 		{
 			xenotypeChance.Value = xenotypeChance.DefaultValue;
 			SetXenotypeChance(xenotypeChance, false);
@@ -493,12 +510,13 @@ public class XenotypeChances<T> : IExposable where T : Def
 		else
 		{
 			//remove xenotype from the config as well
-			_currentConfig.XenotypeChances.Remove(defName);
 
-			if (AllLoadedXenotypeChances.Remove(defName))
+			if (AllLoadedXenotypeChances.TryGetValue(defName, out var removedXenotypeChance))
 			{
-				UpdateBaselinerChanceValue();
+				DisableXenotypeChance(removedXenotypeChance, true);
+				AllLoadedXenotypeChances.Remove(defName);
 			}
+			_currentConfig.XenotypeChances.Remove(defName);
 		}
 	}
 
@@ -562,22 +580,84 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	public bool RequiresSaving()
 	{
-		var chancesNotDefault = AllLoadedXenotypeChances.Any(pair => !pair.Value.IsDefaultValue);
+		var chancesNotDefault = AllLoadedXenotypeChances.Any(pair => !pair.Value.IsDefault);
 		var allowArchiteNotDefault = !AllowArchiteXenotypes;
 		var anyUnloadedXenotypes = UnloadedXenotypes.Any();
-		var anyWeightedXenotypeChances = !OnlyAbsoluteChancesAllowed;
-		return chancesNotDefault || allowArchiteNotDefault || anyUnloadedXenotypes || anyWeightedXenotypeChances;
+		return chancesNotDefault || allowArchiteNotDefault || anyUnloadedXenotypes;
 	}
 
 	public void ExposeData()
 	{
-		if (Scribe.mode == LoadSaveMode.Saving && !RequiresSaving())
+		var configToExpose = _currentConfig;
+		if (Scribe.mode == LoadSaveMode.Saving)
 		{
-			return;
+			if (!RequiresSaving())
+				return;
+			//remove value that has been added during load for the unloaded xenotypes
+			//this cannot be done during load, since we cannot know what xenotypes were previously unloaded then
+			foreach(var unloadedXenotype in UnloadedXenotypes)
+				RemoveBaselinerAdjustmentForUnloadedXenotype(unloadedXenotype);
+			//do not save loaded values that have not been modified
+			configToExpose = CreateFilteredConfigCopy(keyConfigPair => !AllLoadedXenotypeChances.TryGetValue(keyConfigPair.Key, out var config) || !config.IsDefault);
 		}
-		//we can't use scribe in order to keep backwards compatibility
-		//actual loading happens in Initialize function, so just setting the config is enough
-		_currentConfig.ExposeData();
+		configToExpose.ExposeData();
+	}
+
+	private void RemoveBaselinerAdjustmentForUnloadedXenotype(KeyValuePair<string, XenotypeChanceConfig> unloadedXenotype)
+	{
+		if (!UnloadedXenotypes.Contains(unloadedXenotype))
+			throw new ArgumentException(nameof(RemoveBaselinerAdjustmentForUnloadedXenotype) + " wasn't called for unloaded xenotype");
+		if (!_baselinerAdjustedForUnloadedDuringInit)
+			return;
+		var baselinerChance = GetOrAddBaselinerXenotypeChance();
+		baselinerChance.RawValue -= Math.Min(baselinerChance.RawValue, UnloadedXenotypes.Sum(keyValue => keyValue.Value.RawChanceValue));
+	}
+
+	public XenotypeChancesConfig CreateTemplate()
+	{
+		//only write relevant xenotypes (xenotypes which are weighted or nonzero) into template
+		return CreateFilteredConfigCopy(keyConfigPair => !keyConfigPair.Value.IsAbsolute || keyConfigPair.Value.RawChanceValue != 0);
+	}
+
+	private XenotypeChancesConfig CreateFilteredConfigCopy(Predicate<KeyValuePair<string, XenotypeChanceConfig>> filter)
+	{
+		var ret = new XenotypeChancesConfig(_currentConfig);
+		foreach (var keyValuePair in ret.XenotypeChances.Where(keyValuePair => !filter(keyValuePair)).ToArray())
+			ret.XenotypeChances.Remove(keyValuePair.Key);
+
+		return ret;
+	}
+
+	public void ApplyTemplate(XenotypeChancesConfig template)
+	{
+		//load all xenotypes from template
+		foreach (var templateXenotypeKeyValuePair in template.XenotypeChances)
+		{
+			if(AllLoadedXenotypeChances.TryGetValue(templateXenotypeKeyValuePair.Key, out var config))
+			{
+				config.IsAbsolute = templateXenotypeKeyValuePair.Value.IsAbsolute;
+				config.RawValue = templateXenotypeKeyValuePair.Value.RawChanceValue;
+				config.Weight = templateXenotypeKeyValuePair.Value.Weight;
+			}
+			//we do not care that a xenotype doesn't exist if the chance of it appearing was 0
+			else if (templateXenotypeKeyValuePair.Value.RawChanceValue != 0)
+			{
+				_currentConfig.XenotypeChances[templateXenotypeKeyValuePair.Key] = new(templateXenotypeKeyValuePair.Value);
+			}
+		}
+		//disable all xenotypes not part of template
+		foreach(var xenoChanceKeyValuePair in AllLoadedXenotypeChances.Where(xenoChance => !template.XenotypeChances.ContainsKey(xenoChance.Key)))
+		{
+			DisableXenotypeChance(xenoChanceKeyValuePair.Value, false);
+		}
+
+		_currentConfig.AllowArchite = template.AllowArchite;
+
+		//set all chances in game
+		foreach(var loadedXenotype in AllLoadedXenotypeChances.Values)
+		{
+			SetInitialValueForXenotypeChance(loadedXenotype);
+		}
 	}
 }
 
@@ -596,16 +676,12 @@ public class XenotypeChance
 		{
 			if (DefaultValue != value)
 			{
-				//remember to change current value as well, if it was default
-				var wasDefault = IsDefaultValue;
 				_defaultValue = Mathf.Clamp(value, 0f, 1f);
-				if (wasDefault)
-					Value = DefaultValue;
 			}
 		}
 	}
 
-	public bool IsDefaultValue => Mathf.Abs(Value - DefaultValue) < 0.0005;
+	public bool IsDefault => IsAbsolute && Mathf.Abs(Value - DefaultValue) < 0.0005;
 
 	//TODO: refactor XenotypeChances so we can call SetXenotypeChance on setting the relevant properties
 	//TODO: remove RawValue

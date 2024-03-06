@@ -6,6 +6,11 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using KTrie;
+using NVorbis;
+using RimWorld.Planet;
 using UnityEngine.UIElements;
 using Verse;
 using XenotypeSpawnControl.GUIExtensions;
@@ -150,10 +155,14 @@ public static class ModSettingsWindow
 
 			var xenotypeChances = XenotypeChanceDatabase<T>.For(_currentlySelectedDefName);
 
-			//ref of property is not allowed, remember here instead
+			TemplateButtons(listing, xenotypeChances);
+			listing.Gap(6);
+
+			//ref of property is not allowed
 			var architeCheckboxResult = xenotypeChances.AllowArchiteXenotypes;
 			listing.CheckboxLabeled(Strings.Translated.AllowArchiteXenotypes, ref architeCheckboxResult);
 			xenotypeChances.AllowArchiteXenotypes = architeCheckboxResult;
+			listing.Gap(6);
 
 			XenotypeChancesTypeButtons(listing, xenotypeChances);
 
@@ -167,7 +176,7 @@ public static class ModSettingsWindow
 			//first show all INACTIVE xenotypes
 			foreach (var unloadedXenotypeKeyValuePair in xenotypeChances.UnloadedXenotypes.OrderBy(unloaded => unloaded.Key))
 			{
-				InactiveLabel(listing, unloadedXenotypeKeyValuePair.Key.CapitalizeFirst(), unloadedXenotypeKeyValuePair.Value.RawChanceValue);
+				InactiveLabel(listing, unloadedXenotypeKeyValuePair);
 			}
 
 			//then show all configurable xenotypes
@@ -178,6 +187,39 @@ public static class ModSettingsWindow
 
 			if (listing.ButtonText(Strings.Translated.Reset))
 				xenotypeChances.Reset();
+		}
+		
+		private string _lastTemplate = XenotypeChanceDatabases.Templates.Keys.FirstOrDefault();
+		private void TemplateButtons(Listing_Standard listing, XenotypeChances<T> xenotypeChances)
+		{
+			//TODO: I don't know where to get the correct button size for the listing, so modify listing instead of using Widgets
+			var listingTemplateY = listing.curY;
+			listing.ColumnWidth /= 2;
+			//quick acces for last used template, or first, if none have been used before
+			if (_lastTemplate is null || !XenotypeChanceDatabases.Templates.ContainsKey(_lastTemplate))
+				_lastTemplate = XenotypeChanceDatabases.Templates.Keys.FirstOrDefault();
+			if (_lastTemplate is null)
+			{
+				listing.Label(Strings.Translated.NoTemplateHint);
+			}
+			else if (listing.ButtonText(_lastTemplate))
+			{
+				xenotypeChances.ApplyTemplate(XenotypeChanceDatabases.Templates[_lastTemplate]);
+			}
+			//template menu
+			listing.curX += listing.ColumnWidth;
+			listing.curY = listingTemplateY;
+			if (listing.ButtonText(Strings.Translated.Templates))
+			{
+				var templateDialog = new Dialog_Templates<T>(xenotypeChances);
+				templateDialog.OnClosed = () => {
+					if (templateDialog.AppliedOrSavedTemplateName is not null)
+						_lastTemplate = templateDialog.AppliedOrSavedTemplateName;
+				};
+				Find.WindowStack.Add(templateDialog);
+			}
+			listing.curX -= listing.ColumnWidth;
+			listing.ColumnWidth *= 2;
 		}
 
 		private static void XenotypeChancesTypeButtons(Listing_Standard listing, XenotypeChances<T> xenotypeChances)
@@ -215,7 +257,7 @@ public static class ModSettingsWindow
 				xenotypeChances.SetWeightForAllowedWeightedXenotypes(_allWeightSetterValue.Value);
 		}
 
-		private static void InactiveLabel(Listing_Standard listing, string xenotypeName, int savedChanceRawValue)
+		private static void InactiveLabel(Listing_Standard listing, KeyValuePair<string, XenotypeChanceConfig> xenotypeNameConfigPair)
 		{
 			var inactiveRect = listing.GetRect(Text.CalcHeight($"{Strings.Translated.Inactive}: ", listing.ColumnWidth) + Listing_Standard.PinnableActionHeight + (listing.verticalSpacing * 2f));
 			var currentColor = GUI.color;
@@ -223,10 +265,13 @@ public static class ModSettingsWindow
 			GUI.DrawTexture(inactiveRect, BaseContent.WhiteTex);
 			GUI.color = currentColor;
 			if (Widgets.CloseButtonFor(inactiveRect))
-				ModifiableXenotypeDatabase.RemoveCustomXenotype(xenotypeName);
+				ModifiableXenotypeDatabase.RemoveCustomXenotype(xenotypeNameConfigPair.Key);
 			listing.curY -= inactiveRect.height;
 
-			listing.Label($"{Strings.Translated.Inactive}: {xenotypeName}, {savedChanceRawValue / 10m}%");
+			var inactiveLabel = $"{Strings.Translated.Inactive}: {xenotypeNameConfigPair.Key}, {xenotypeNameConfigPair.Value.RawChanceValue / 10m}%";
+			if (!xenotypeNameConfigPair.Value.IsAbsolute)
+				inactiveLabel += $", {Strings.Translated.Weight}: {xenotypeNameConfigPair.Value.Weight}";
+			listing.Label(inactiveLabel);
 			listing.Gap(Listing_Standard.PinnableActionHeight + listing.verticalSpacing);
 		}
 	}
@@ -293,5 +338,87 @@ public static class ModSettingsWindow
 			clickedAction = () => CurrentTab() = Tab;
 			selectedGetter = () => CurrentTab() == Tab;
 		}
+	}
+}
+
+public class Dialog_Templates<T> : Window where T : Def
+{
+	private const float ENTRYHEIGHT = Widgets.RadioButtonSize;
+	private const float ENTRYMARGIN = Widgets.CloseButtonMargin;
+	private XenotypeChances<T> _xenotypeChances;
+	private string _newTemplateName = string.Empty;
+	private ScrollViewStatus _scrollViewStatus = new();
+	public Action? OnClosed { get; set; }
+	public string? AppliedOrSavedTemplateName { get; private set; }
+	public Dialog_Templates(XenotypeChances<T> xenotypeChances) : base()
+	{
+		//setup window properties
+		closeOnClickedOutside = true;
+		absorbInputAroundWindow = true;
+		doCloseX = true;
+		doCloseButton = true;
+		optionalTitle = Strings.Translated.Templates;
+
+		_xenotypeChances = xenotypeChances;
+	}
+
+	public override void OnAcceptKeyPressed()
+	{
+		//try to save the template instead of closing the window
+		if(!_newTemplateName.NullOrEmpty())
+			SaveTemplate(_newTemplateName);
+		base.OnAcceptKeyPressed();
+	}
+
+	public override void DoWindowContents(Rect inRect)
+	{
+		//do not draw over the close button and leave a small margin above it
+		inRect.height -= CloseButSize.y + ENTRYMARGIN;
+		using var scrollScope = new ScrollableListingScope(inRect, _scrollViewStatus);
+		var listing = scrollScope.Listing;
+
+		foreach (var templateKeyValuePair in XenotypeChanceDatabases.Templates.ToArray())
+		{
+			var entryRect = listing.GetRect(ENTRYHEIGHT);
+			entryRect.SplitVertically(entryRect.width - ENTRYHEIGHT, out entryRect, out var firstIconButtonRect);
+			entryRect.SplitVertically(entryRect.width - ENTRYHEIGHT, out entryRect, out var secondIconButtonRect);
+
+			if(Widgets.ButtonText(entryRect, templateKeyValuePair.Key))
+			{
+				_xenotypeChances.ApplyTemplate(templateKeyValuePair.Value);
+				AppliedOrSavedTemplateName = templateKeyValuePair.Key;
+				Close();
+			}
+			if (Widgets.ButtonImage(secondIconButtonRect, TexButton.Save))
+			{
+				SaveTemplate(templateKeyValuePair.Key);
+			}
+			if (Widgets.ButtonImage(firstIconButtonRect, TexButton.DeleteX))
+			{
+				XenotypeChanceDatabases.Templates.Remove(templateKeyValuePair.Key);
+			}
+
+			listing.Gap(ENTRYMARGIN);
+		}
+		//only allow alphanumerical strings
+		var rect = listing.GetRect(ENTRYHEIGHT);
+		rect.SplitVertically(rect.width - ENTRYHEIGHT, out var textRect, out var buttonRect);
+		_newTemplateName = Widgets.TextField(textRect, _newTemplateName) ?? string.Empty;
+		_newTemplateName = new(_newTemplateName.Where(char.IsLetterOrDigit).ToArray());
+		if (Widgets.ButtonImage(buttonRect, TexButton.Save) && !_newTemplateName.NullOrEmpty())
+			SaveTemplate(_newTemplateName);
+	}
+
+	private void SaveTemplate(string templateName)
+	{
+		XenotypeChanceDatabases.Templates[templateName] = _xenotypeChances.CreateTemplate();
+		AppliedOrSavedTemplateName = templateName;
+		Close();
+	}
+	public override void PostClose()
+	{
+		if (OnClosed is not null)
+			OnClosed();
+		base.PostClose();
 	}
 }
