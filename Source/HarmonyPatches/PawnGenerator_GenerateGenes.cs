@@ -71,7 +71,7 @@ public class PawnGenerator_GenerateGenes
 	{
 		var xenotypeChances = XenotypeChanceDatabase<T>.For(defName);
 
-		if (Rand.Range(0f, 1f) > xenotypeChances.GetBaselinerChance()
+		if (Rand.Range(0f, 1f) > xenotypeChances.GetBaselinerChanceValue()
 			&& xenotypeChances.CustomXenotypeChances.Any())
 		{
 			xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance => chance.RawValue, out var randomResult);

@@ -14,12 +14,7 @@ public static class PawnGenerator_AdjustXenotypeForFactionlessPawn
 	{
 		var xenotypeChances = XenotypeChanceDatabase<FactionDef>.For(EmptyFactionDef.Instance.defName);
 
-		var premadeXenotypeChanceSum = DefDatabase<XenotypeDef>.AllDefsListForReading.Sum(xenotypeDef
-			=> DefWeightSelector(xenotypeDef, xenotypeChances));
-
-		var customXenotypeChanceSum = xenotypeChances.GetCustomXenotypeChanceSum() * 2f;
-
-		if (Rand.Range(0f, premadeXenotypeChanceSum + customXenotypeChanceSum) <= customXenotypeChanceSum
+		if (Rand.Range(0f, 1f) <= xenotypeChances.GetCustomXenotypeChanceValueSum()
 			&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
 				=> chance.RawValue, out var result))
 		{
@@ -27,14 +22,11 @@ public static class PawnGenerator_AdjustXenotypeForFactionlessPawn
 			xenotype = XenotypeDefOf.Baseliner;
 		}
 		else if (DefDatabase<XenotypeDef>.AllDefs.TryRandomElementByWeight(xenotypeDef
-			=> DefWeightSelector(xenotypeDef, xenotypeChances), out var result2))
+			=> xenotypeDef.factionlessGenerationWeight, out var result2))
 		{
 			xenotype = result2;
 		}
 
 		return false;
 	}
-
-	private static float DefWeightSelector(XenotypeDef xenotypeDef, XenotypeChances<FactionDef> xenotypeChances)
-		=> xenotypeDef == XenotypeDefOf.Baseliner ? xenotypeChances.GetBaselinerChance() : xenotypeDef.factionlessGenerationWeight;
 }

@@ -52,7 +52,7 @@ public class XenotypeChances<T> : IExposable where T : Def
 	/// </summary>
 	private bool _distributeAmongAllXenotypes = false;
 
-	public void SetXenotypeChanceForDef(T def, XenotypeDef xenotypeDef, int rawChanceValue)
+	private void SetXenotypeChanceForDef(T def, XenotypeDef xenotypeDef, int rawChanceValue)
 	{
 		if (def is EmptyFactionDef)
 			SetXenotypeChanceForEmptyFaction(xenotypeDef, rawChanceValue);
@@ -60,31 +60,11 @@ public class XenotypeChances<T> : IExposable where T : Def
 			SetChanceInXenotypeSet(ref _xenotypeSetRef(def), xenotypeDef, rawChanceValue);
 	}
 
-	public float? GetXenotypeChance(T def, XenotypeDef xenotypeDef)
-		=> xenotypeDef == XenotypeDefOf.Baseliner
-		? GetBaselinerChance()
-		: def is EmptyFactionDef
-		? GetXenotypeChanceForEmptyFaction(xenotypeDef) 
-		: FindChanceInXenotypeSet(_xenotypeSetRef(def), xenotypeDef);
-
-	private static float GetXenotypeChanceForEmptyFaction(XenotypeDef xenotypeDef)
-		=> xenotypeDef.factionlessGenerationWeight / 50f;
-
-	//TODO: use actual weights for factionless/check behavior with many xenotypes
 	private static void SetXenotypeChanceForEmptyFaction(XenotypeDef xenotypeDef, int rawChanceValue)
-		=> xenotypeDef.factionlessGenerationWeight
-		= rawChanceValue / 20f;
+		=> xenotypeDef.factionlessGenerationWeight = rawChanceValue / 10f;
 
-	private float GetBaselinerChanceForEmptyFaction()
-		=> 1f
-		- ((DefDatabase<XenotypeDef>.AllDefsListForReading.Sum(def
-			=> def == XenotypeDefOf.Baseliner ? 0f : def.factionlessGenerationWeight) / 50f)
-		+ GetCustomXenotypeChanceSum());
-
-	public float GetBaselinerChance()
-		=> Def is EmptyFactionDef
-		? GetBaselinerChanceForEmptyFaction()
-		: (_xenotypeSetRef(Def!)?.BaselinerChance ?? 1f) - GetCustomXenotypeChanceSum();
+	public float GetBaselinerChanceValue()
+		=> GetOrAddBaselinerXenotypeChance().Value;
 
 	public ref XenotypeSet? GetXenotypeSet(T def) => ref _xenotypeSetRef(def);
 
@@ -104,7 +84,7 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	private static AccessTools.FieldRef<T, XenotypeSet?> _xenotypeSetRef = XenotypeSetRefs.GetForType<T>();
 
-	public float GetCustomXenotypeChanceSum() => CustomXenotypeChances.Sum(xenoChance => xenoChance.Value);
+	public float GetCustomXenotypeChanceValueSum() => CustomXenotypeChances.Sum(xenoChance => xenoChance.Value);
 
 	public float GetCustomXenotypeChanceSumExcluding(CustomXenotype? xenotype) => CustomXenotypeChances.Where(xenoChance => xenoChance.Xenotype.CustomXenotype != xenotype).Sum(chance => chance.Value);
 
@@ -444,33 +424,41 @@ public class XenotypeChances<T> : IExposable where T : Def
 		if (Def is null)
 			return;
 		
-		float xenoDefaultValue;
-		if (xenotypeChance.Xenotype.Def == XenotypeDefOf.Baseliner)
+		//remember to change current value as well, if it was default
+		var wasDefault = xenotypeChance.IsDefault;
+		xenotypeChance.DefaultIsAbsolute = Def is not EmptyFactionDef;
+		if (Def is EmptyFactionDef)
 		{
-			//GetBaselinerChance() might give false results, depending on what xenotypes have been unloaded/reloaded TODO:requires further investigation, but should be accurate everywhere else
-			xenoDefaultValue = 1f - ModifiableXenotypeDatabase.AllValues.Where(xenotype => xenotype.Value.Def != XenotypeDefOf.Baseliner).Sum(xenotype => GetDefaultValueFromDef(xenotype.Value));
+			//do not spawn custom xenotypes in empty faction by default
+			xenotypeChance.DefaultWeight = xenotypeChance.Xenotype.Def?.factionlessGenerationWeight ?? 0f;
 		}
 		else
 		{
-			// be careful default value may exceed 100% or be lower than 0%, so clamping is necessary
-			xenoDefaultValue = GetDefaultValueFromDef(xenotypeChance.Xenotype);
+			xenotypeChance.DefaultValue = GetDefaultValueFromDef(xenotypeChance.Xenotype);
 		}
 
-		//remember to change current value as well, if it was default
-		var wasDefault = xenotypeChance.IsDefault;
-			xenotypeChance.DefaultValue = xenoDefaultValue;
-			if (wasDefault)
-				xenotypeChance.Value = xenotypeChance.DefaultValue;
+		if (wasDefault)
+			xenotypeChance.SetToDefault();
 	}
 
-	private float GetDefaultValueFromDef(ModifiableXenotype xenotype) => 
-				Mathf.Clamp(xenotype.Def is { } xenotypeDef
-					? GetXenotypeChance(Def, xenotypeDef) ?? 0f
+	private float GetDefaultValueFromDef(ModifiableXenotype xenotype)
+	{
+		float ret;
+		if(xenotype.Def == XenotypeDefOf.Baseliner)
+		{
+			//baseliner isn't directly in def, calculate instead
+			ret = 1f - ModifiableXenotypeDatabase.AllValues.Where(xenotype => xenotype.Value.Def != XenotypeDefOf.Baseliner).Sum(xenotype => GetDefaultValueFromDef(xenotype.Value));
+		}
+		else
+		{
+			ret = xenotype.Def is { } xenotypeDef
+					? FindChanceInXenotypeSet(_xenotypeSetRef(Def), xenotypeDef) ?? 0f
 					: xenotype is ModifiableXenotype.Generated generatedXenotype
 					? generatedXenotype.GetDefaultChanceIn(Def)
-					: Def is EmptyFactionDef
-					? 0.02f
-					: 0f, 0f, 1f);
+					: 0f;
+		}
+		return Mathf.Clamp(ret, 0f, 1f);
+	}
 
 	public void Reset()
 	{
@@ -492,12 +480,8 @@ public class XenotypeChances<T> : IExposable where T : Def
 
 	private void ResetToDefaultChance(XenotypeChance xenotypeChance)
 	{
-		xenotypeChance.IsAbsolute = true;
-		if(!xenotypeChance.IsDefault)
-		{
-			xenotypeChance.Value = xenotypeChance.DefaultValue;
-			SetXenotypeChance(xenotypeChance, false);
-		}
+		xenotypeChance.SetToDefault();
+		SetXenotypeChance(xenotypeChance, false);
 	}
 
 	public void Remove(string defName)
@@ -680,8 +664,22 @@ public class XenotypeChance
 			}
 		}
 	}
+	private float _defaultWeight = -1;
+	public float DefaultWeight 
+	{ 
+		get => _defaultWeight; 
+		//ensure value is in alllowed percentage range
+		set 
+		{
+			if (DefaultWeight != value)
+			{
+				_defaultWeight = Mathf.Max(value, 0f);
+			}
+		}
+	}
+	public bool DefaultIsAbsolute { get; set; } = true;
 
-	public bool IsDefault => IsAbsolute && Mathf.Abs(Value - DefaultValue) < 0.0005;
+	public bool IsDefault => IsAbsolute == DefaultIsAbsolute && (IsAbsolute ? Mathf.Abs(Value - DefaultValue) < 0.0005 : Mathf.Abs(Weight - DefaultWeight) < 0.0005);
 
 	//TODO: refactor XenotypeChances so we can call SetXenotypeChance on setting the relevant properties
 	//TODO: remove RawValue
@@ -743,6 +741,15 @@ public class XenotypeChance
 		Xenotype = xenotype;
 		ResetChanceString();
 		ResetWeightString();
+	}
+
+	public void SetToDefault()
+	{
+		IsAbsolute = DefaultIsAbsolute;
+		if(IsAbsolute)
+			Value = DefaultValue;
+		else
+			Weight = DefaultWeight;
 	}
 
 	private void ResetChanceString()

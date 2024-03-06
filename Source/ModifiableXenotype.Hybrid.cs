@@ -39,7 +39,7 @@ public partial class ModifiableXenotype
 			papaXenotypeSet
 				= xenotypeSet?.xenotypeChances.TryRandomElementByWeight(chance
 					=> chance.xenotype == XenotypeDefOf.Baseliner
-					? xenotypeChances.GetCustomXenotypeChanceSum()
+					? xenotypeChances.GetCustomXenotypeChanceValueSum()
 					: chance.chance, out var xenotypeChance) ?? false
 				? xenotypeChance.xenotype
 				: null;
@@ -84,7 +84,7 @@ public partial class ModifiableXenotype
 			.Select(def => def.genes)
 			.Concat(ModifiableXenotypeDatabase.CustomXenotypes.Values
 				.Select(modifiable => modifiable.CustomXenotype!.genes))
-			.Where(geneEntry => geneEntry != genes)
+			.Where(geneEntry => geneEntry != genes && geneEntry != null)
 			.RandomElement();
 
 		public Hybrid() : base(Strings.HybridKey) { }
