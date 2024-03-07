@@ -36,11 +36,17 @@ public partial class ModifiableXenotype
 			where T : Def
 		{
 			parentXenotype
-				= xenotypeChances.AllAllowedXenotypeChances.Where(xenoChance => xenoChance.Xenotype.Def != XenotypeDefOf.Baseliner && xenoChance.Xenotype != otherParentXenotype).TryRandomElementByWeight(chance
+				= xenotypeChances.AllAllowedXenotypeChances.Where(xenoChance => IsValidParentXenotype(xenoChance.Xenotype, otherParentXenotype)).TryRandomElementByWeight(chance
 					=> chance.RawValue, out var xenotypeChance)
 				? xenotypeChance.Xenotype
 				: null;
+			parentXenotype ??= GetFallbackXenotype(xenotypeChances, otherParentXenotype);
 
+			return GetGenesForXenotype(xenotypeChances, parentXenotype);
+		}
+
+		private static IEnumerable<GeneDef> GetGenesForXenotype<T>(XenotypeChances<T> xenotypeChances, ModifiableXenotype? parentXenotype) where T : Def
+		{
 			IEnumerable<GeneDef> parentGenes = null;
 			if (parentXenotype is not null)
 			{
@@ -54,18 +60,25 @@ public partial class ModifiableXenotype
 					parentGenes = parentXenotype.xenotypeGenes;
 				}
 			}
-			return parentGenes
-				?? GetFallbackGenesExcluding(otherParentXenotype?.Def);
+
+			return parentGenes;
 		}
 
-		private static List<GeneDef> GetFallbackGenesExcluding(XenotypeDef? excludedDef)
-			=> DefDatabase<XenotypeDef>.AllDefs
-			.Where(xenotype => xenotype != XenotypeDefOf.Baseliner && xenotype != excludedDef)
-			.Select(def => def.genes)
-			.Concat(ModifiableXenotypeDatabase.CustomXenotypes.Values
-				.Select(modifiable => modifiable.CustomXenotype!.genes))
-			.Where(geneEntry => geneEntry != null)
-			.RandomElement();
+		private static ModifiableXenotype GetFallbackXenotype<T>(XenotypeChances<T> xenotypeChances, ModifiableXenotype? excludedXenotype) where T : Def
+		{
+			var parentSource = xenotypeChances.AllAllowedXenotypeChances
+			.Select(xenoChance => xenoChance.Xenotype)
+			.Where(xenotype => IsValidParentXenotype(xenotype, excludedXenotype));
+			//if not enough xenotypes allowed check all
+			if (!parentSource.Any())
+				parentSource = ModifiableXenotypeDatabase.AllValues.Values
+				.Where(xenotype => IsValidParentXenotype(xenotype, excludedXenotype));
+
+			return parentSource.RandomElement();
+		}
+
+		private static bool IsValidParentXenotype(ModifiableXenotype checkXenotype, ModifiableXenotype? excludedXenotype)
+			=> checkXenotype is not Hybrid && checkXenotype.Def != XenotypeDefOf.Baseliner && checkXenotype != excludedXenotype;
 
 		public Hybrid() : base(Strings.HybridKey) { }
 
