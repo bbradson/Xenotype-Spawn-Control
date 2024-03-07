@@ -18,7 +18,9 @@ public static class PawnGenerator_AdjustXenotypeForFactionlessPawn
 			&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
 				=> chance.RawValue, out var result))
 		{
-			request.ForcedCustomXenotype = result.Xenotype.CustomXenotype;
+			request.ForcedCustomXenotype = result.Xenotype is ModifiableXenotype.Generated xenotypeGenerator
+				? xenotypeGenerator.GenerateXenotype(xenotypeChances)
+				: result.Xenotype.CustomXenotype;
 			xenotype = XenotypeDefOf.Baseliner;
 		}
 		else if (DefDatabase<XenotypeDef>.AllDefs.TryRandomElementByWeight(xenotypeDef

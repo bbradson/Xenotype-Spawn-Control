@@ -63,9 +63,6 @@ public class XenotypeChances<T> : IExposable where T : Def
 	private static void SetXenotypeChanceForEmptyFaction(XenotypeDef xenotypeDef, int rawChanceValue)
 		=> xenotypeDef.factionlessGenerationWeight = rawChanceValue / 10f;
 
-	public float GetBaselinerChanceValue()
-		=> GetOrAddBaselinerXenotypeChance().Value;
-
 	public ref XenotypeSet? GetXenotypeSet(T def) => ref _xenotypeSetRef(def);
 
 	private static float? FindChanceInXenotypeSet(XenotypeSet? xenotypeSet, XenotypeDef? xenotypeDef)

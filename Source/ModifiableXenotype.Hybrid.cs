@@ -18,9 +18,8 @@ public partial class ModifiableXenotype
 		{
 			CustomXenotype!.inheritable = Rand.Bool;
 
-			var xenotypeSet = xenotypeChances.GetXenotypeSet(xenotypeChances.Def!);
-			var papaGenes = GetPapaGenes(xenotypeChances, xenotypeSet, out var papaXenotypeSet, out var papaCustomXenotype);
-			var mamaGenes = GetMamaGenes(xenotypeChances, xenotypeSet, papaXenotypeSet, papaCustomXenotype, papaGenes);
+			var papaGenes = GetParentGenes(xenotypeChances, out var papaXenotype);
+			var mamaGenes = GetParentGenes(xenotypeChances, out _, papaXenotype);
 
 			CustomXenotype.genes.Clear();
 			AddInheritedGenes(CustomXenotype.genes, mamaGenes, papaGenes);
@@ -33,63 +32,44 @@ public partial class ModifiableXenotype
 		public override float GetDefaultChanceIn<T>(T def)
 			=> def.GetModExtension<Extension>()?.hybridChance ?? 0f;
 
-		private static List<GeneDef> GetPapaGenes<T>(XenotypeChances<T> xenotypeChances, XenotypeSet? xenotypeSet, out XenotypeDef? papaXenotypeSet, out CustomXenotype? papaCustomXenotype)
+		private static IEnumerable<GeneDef> GetParentGenes<T>(XenotypeChances<T> xenotypeChances, out ModifiableXenotype? parentXenotype, ModifiableXenotype? otherParentXenotype = null)
 			where T : Def
 		{
-			papaXenotypeSet
-				= xenotypeSet?.xenotypeChances.TryRandomElementByWeight(chance
-					=> chance.xenotype == XenotypeDefOf.Baseliner
-					? xenotypeChances.GetCustomXenotypeChanceValueSum()
-					: chance.chance, out var xenotypeChance) ?? false
-				? xenotypeChance.xenotype
+			parentXenotype
+				= xenotypeChances.AllAllowedXenotypeChances.Where(xenoChance => xenoChance.Xenotype.Def != XenotypeDefOf.Baseliner && xenoChance.Xenotype != otherParentXenotype).TryRandomElementByWeight(chance
+					=> chance.RawValue, out var xenotypeChance)
+				? xenotypeChance.Xenotype
 				: null;
 
-			papaCustomXenotype
-				= (papaXenotypeSet == XenotypeDefOf.Baseliner || papaXenotypeSet == null)
-				&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
-					=> chance.RawValue, out var customXenotypeChance)
-				? customXenotypeChance.Xenotype.CustomXenotype
-				: null;
-
-			return papaCustomXenotype?.genes
-				?? papaXenotypeSet?.genes
-				?? GetFallbackGenesExcluding(null);
+			IEnumerable<GeneDef> parentGenes = null;
+			if (parentXenotype is not null)
+			{
+				if (parentXenotype is Generated generatedParent)
+				{
+					if (generatedParent is not Hybrid)
+						parentGenes = generatedParent.GenerateXenotype(xenotypeChances).genes;
+				}
+				else
+				{
+					parentGenes = parentXenotype.xenotypeGenes;
+				}
+			}
+			return parentGenes
+				?? GetFallbackGenesExcluding(otherParentXenotype?.Def);
 		}
 
-		private static List<GeneDef> GetMamaGenes<T>(XenotypeChances<T> xenotypeChances, XenotypeSet? xenotypeSet, XenotypeDef? papaXenotypeSet, CustomXenotype? papaCustomXenotype, List<GeneDef> papaGenes)
-			where T : Def
-		{
-			var mamaXenotypeSet = xenotypeSet?.xenotypeChances.TryRandomElementByWeight(chance
-				=> chance.xenotype == XenotypeDefOf.Baseliner ? xenotypeChances.GetCustomXenotypeChanceSumExcluding(papaCustomXenotype)
-				: chance.xenotype == papaXenotypeSet ? 0f
-				: chance.chance, out var xenotypeChance) ?? false
-				? xenotypeChance.xenotype
-				: null;
-
-			var mamaCustomXenotype
-				= (mamaXenotypeSet == XenotypeDefOf.Baseliner || mamaXenotypeSet == null)
-				&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance
-					=> chance.Xenotype.CustomXenotype == papaCustomXenotype ? 0 : chance.RawValue, out var customXenotypeChance)
-				? customXenotypeChance.Xenotype.CustomXenotype
-				: null;
-
-			return mamaCustomXenotype?.genes
-				?? mamaXenotypeSet?.genes
-				?? GetFallbackGenesExcluding(papaGenes);
-		}
-
-		private static List<GeneDef> GetFallbackGenesExcluding(List<GeneDef>? genes)
+		private static List<GeneDef> GetFallbackGenesExcluding(XenotypeDef? excludedDef)
 			=> DefDatabase<XenotypeDef>.AllDefs
-			.Where(xenotype => xenotype != XenotypeDefOf.Baseliner)
+			.Where(xenotype => xenotype != XenotypeDefOf.Baseliner && xenotype != excludedDef)
 			.Select(def => def.genes)
 			.Concat(ModifiableXenotypeDatabase.CustomXenotypes.Values
 				.Select(modifiable => modifiable.CustomXenotype!.genes))
-			.Where(geneEntry => geneEntry != genes && geneEntry != null)
+			.Where(geneEntry => geneEntry != null)
 			.RandomElement();
 
 		public Hybrid() : base(Strings.HybridKey) { }
 
-		public static void AddInheritedGenes(List<GeneDef> targetList, List<GeneDef> mamaGenes, List<GeneDef> papaGenes)
+		public static void AddInheritedGenes(List<GeneDef> targetList, IEnumerable<GeneDef> mamaGenes, IEnumerable<GeneDef> papaGenes)
 		{
 			targetList.AddRange(mamaGenes);
 			targetList.AddRange(papaGenes);

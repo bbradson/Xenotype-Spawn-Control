@@ -71,18 +71,14 @@ public class PawnGenerator_GenerateGenes
 	{
 		var xenotypeChances = XenotypeChanceDatabase<T>.For(defName);
 
-		if (Rand.Range(0f, 1f) > xenotypeChances.GetBaselinerChanceValue()
-			&& xenotypeChances.CustomXenotypeChances.Any())
+		if (Rand.Range(0f, 1f) <= xenotypeChances.GetCustomXenotypeChanceValueSum()
+			&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance => chance.RawValue, out var randomResult))
 		{
-			xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance => chance.RawValue, out var randomResult);
-			if (randomResult.Xenotype?.Def != XenotypeDefOf.Baseliner && randomResult.Xenotype?.CustomXenotype != null)
-			{
-				result = randomResult.Xenotype is ModifiableXenotype.Generated xenotypeGenerator
-					? xenotypeGenerator.GenerateXenotype(xenotypeChances)
-					: randomResult.Xenotype.CustomXenotype;
+			result = randomResult.Xenotype is ModifiableXenotype.Generated xenotypeGenerator
+				? xenotypeGenerator.GenerateXenotype(xenotypeChances)
+				: randomResult.Xenotype.CustomXenotype;
 
-				return true;
-			}
+			return true;
 		}
 
 		result = null;
