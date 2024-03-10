@@ -5,16 +5,16 @@
 
 namespace XenotypeSpawnControl.GUIExtensions;
 
-public ref struct ScrollableListingScope //: IDisposable
+public class ScrollableListingScope : IDisposable
 {
 	public Listing_Standard Listing { get; }
 
-	private ref float _scrollViewHeight;
+	private ScrollViewStatus _scrollViewStatus;
 
-	public ScrollableListingScope(Rect outRect, ref ScrollViewStatus scrollViewStatus, Listing_Standard? listing = null, bool showScrollbars = true)
+	public ScrollableListingScope(Rect outRect, ScrollViewStatus scrollViewStatus, Listing_Standard? listing = null, bool showScrollbars = true)
 	{
-		_scrollViewHeight = ref scrollViewStatus.Height;
-		var viewRect = outRect with { width = outRect.width - 20f, height = _scrollViewHeight };
+		_scrollViewStatus = scrollViewStatus;
+		var viewRect = outRect with { width = outRect.width - 20f, height = _scrollViewStatus.Height };
 		Listing = listing ?? new();
 		Widgets.BeginScrollView(outRect, ref scrollViewStatus.Position, viewRect, showScrollbars);
 		viewRect.height = float.PositiveInfinity;
@@ -23,7 +23,7 @@ public ref struct ScrollableListingScope //: IDisposable
 
 	public void Dispose()
 	{
-		_scrollViewHeight = Listing.CurHeight + 12f;
+		_scrollViewStatus.Height = Listing.CurHeight + 12f;
 		Listing.End();
 		Widgets.EndScrollView();
 	}

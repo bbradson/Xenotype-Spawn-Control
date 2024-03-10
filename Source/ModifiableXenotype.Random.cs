@@ -9,7 +9,7 @@ public partial class ModifiableXenotype
 {
 	public class Random : Generated
 	{
-		public override string Label => Strings.Translated.RandomGenes;
+		public override string DisplayLabel => Strings.Translated.RandomGenes;
 		public override string? Tooltip => Strings.Translated.RandomGenesTooltip;
 
 		public override CustomXenotype GenerateXenotype<T>(XenotypeChances<T> xenotypeChances)

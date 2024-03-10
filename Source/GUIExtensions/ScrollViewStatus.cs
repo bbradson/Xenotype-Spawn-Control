@@ -5,7 +5,7 @@
 
 namespace XenotypeSpawnControl.GUIExtensions;
 
-public struct ScrollViewStatus
+public class ScrollViewStatus
 {
 	public Vector2 Position;
 	public float Height;
