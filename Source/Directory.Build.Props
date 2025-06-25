@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<PropertyGroup>
+		<AssemblyName>XenotypeSpawnControl</AssemblyName>
+		<RootNamespace>XenotypeSpawnControl</RootNamespace>
+		<Authors>Bradson</Authors>
+		<Version>1.1.0</Version>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Optimize>true</Optimize>
+		<EnableNETAnalyzers>True</EnableNETAnalyzers>
+		<AnalysisLevel>preview-recommended</AnalysisLevel>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>5</WarningLevel>
+		<DebugType>portable</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<NoWarn>CA1000;CA1051;CA1305;CA1707;CA1708;CA1711;CA1725;CA1852;CA2201</NoWarn>
+		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\$(Configuration)\</BaseIntermediateOutputPath>
+		<MSBuildProjectExtensionsPath>obj\$(MSBuildProjectName)\$(Configuration)\</MSBuildProjectExtensionsPath>
+		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
+		<PublicizerClearCacheOnClean>true</PublicizerClearCacheOnClean>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="PolySharp" Version="1.*" />
+		<PackageReference Include="Krafs.Publicizer" Version="2.*" />
+		<Publicize Include="Assembly-CSharp:RimWorld.Dialog_CreateXenotype.selectedGenes" />
+		<Publicize Include="Assembly-CSharp:RimWorld.Dialog_CreateXenotype.inheritable" />
+		<Publicize Include="Assembly-CSharp:RimWorld.Dialog_CreateXenotype.OnGenesChanged" />
+		<Publicize Include="Assembly-CSharp:RimWorld.FactionDef.cachedDescription" />
+		<Publicize Include="Assembly-CSharp:RimWorld.GeneCreationDialogBase.ignoreRestrictions" />
+		<Publicize Include="Assembly-CSharp:RimWorld.GeneCreationDialogBase.WithinAcceptableBiostatLimits" />
+		<Publicize Include="Assembly-CSharp:RimWorld.GeneCreationDialogBase.xenotypeName" />
+		<Publicize Include="Assembly-CSharp:RimWorld.GeneSet.genes" />
+		<Publicize Include="Assembly-CSharp:RimWorld.XenotypeSet.xenotypeChances" />
+		<Publicize Include="Assembly-CSharp:Verse.IntRange.Includes" />
+		<Publicize Include="Assembly-CSharp:Verse.Listing.columnWidthInt" />
+		<Publicize Include="Assembly-CSharp:Verse.Listing.curX" />
+		<Publicize Include="Assembly-CSharp:Verse.Listing.curY" />
+		<Publicize Include="Assembly-CSharp:Verse.PawnGenerator.GenerateGenes" />
+	</ItemGroup>
+</Project>
