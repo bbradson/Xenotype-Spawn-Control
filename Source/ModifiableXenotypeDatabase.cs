@@ -82,10 +82,7 @@ public static class ModifiableXenotypeDatabase
 	{
 		var xenotype = Current.Game?.customXenotypeDatabase?.customXenotypes.Find(xenotype => xenotype.name == name);
 		if (xenotype is null)
-		{
-			TryLoadXenotypeFromFile(GenFilePaths.AbsFilePathForXenotype(GenFile.SanitizedFileName(name)),
-				out xenotype, logFailure);
-		}
+			TryLoadXenotypeFromFile(name, out xenotype, logFailure);
 
 		return xenotype is null
 			? null

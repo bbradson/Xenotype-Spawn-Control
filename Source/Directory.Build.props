@@ -4,7 +4,7 @@
 		<AssemblyName>XenotypeSpawnControl</AssemblyName>
 		<RootNamespace>XenotypeSpawnControl</RootNamespace>
 		<Authors>Bradson</Authors>
-		<Version>1.1.0</Version>
+		<Version>1.1.1</Version>
 		<TargetFramework>net48</TargetFramework>
 		<LangVersion>preview</LangVersion>
 		<Nullable>enable</Nullable>
