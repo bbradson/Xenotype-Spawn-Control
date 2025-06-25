@@ -14,12 +14,12 @@ public static class XenotypeChanceDatabases
 	// - Add to PawnGenerator_GenerateGenes
 	// - possibly add to XenotypeSetRefs
 
-	private static GenericBase[] SupportedDefTypes { get; } = new GenericBase[]
-	{
+	private static GenericBase[] SupportedDefTypes { get; } =
+	[
 		new Generic<FactionDef>(),
 		new Generic<PawnKindDef>(),
 		new Generic<MemeDef>()
-	};
+	];
 
 	public static Dictionary<string, XenotypeChancesConfig> Templates = new();
 
@@ -69,6 +69,7 @@ public static class XenotypeChanceDatabases
 		internal abstract void ExposeData();
 
 	}
+	
 	private class Generic<T> : GenericBase where T : Def
 	{
 		private static bool RequiresIdeology => typeof(T) == typeof(MemeDef);

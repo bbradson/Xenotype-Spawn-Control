@@ -3,24 +3,26 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using System.Linq;
+using JetBrains.Annotations;
 
 namespace XenotypeSpawnControl.HarmonyPatches;
 
 [HarmonyPatch(typeof(PawnGenerator), nameof(PawnGenerator.GenerateGenes))]
-public class PawnGenerator_GenerateGenes
+// ReSharper disable once InconsistentNaming
+public static class PawnGenerator_GenerateGenes
 {
 	[HarmonyPrefix]
+	[UsedImplicitly]
 	public static void Prefix(Pawn? pawn, ref XenotypeDef? xenotype, ref PawnGenerationRequest request)
 	{
 		if (pawn?.genes is null)
 			return;
 
 		if (xenotype is null)
-			Log.Error($"xenotype is null");
+			Log.Error($"Tried to generate genes for null xenotype on pawn {pawn}");
 
 		if (xenotype != XenotypeDefOf.Baseliner || request.ForcedCustomXenotype != null
-			|| (request.ForcedXenotype != null && request.ForcedXenotype != XenotypeDefOf.Baseliner))
+			|| (request.ForcedXenotype is { } forcedXenotype && forcedXenotype != XenotypeDefOf.Baseliner))
 		{
 			return;
 		}
@@ -39,7 +41,7 @@ public class PawnGenerator_GenerateGenes
 	}
 
 	// This here would replace the Baseliner xenotype if replacing it would be supported by this mod. It is not, however.
-	//private static bool TryGetReplacement(XenotypeDef xenotypeDef, out ModifiableXenotype replacementXenotype)
+	// private static bool TryGetReplacement(XenotypeDef xenotypeDef, out ModifiableXenotype replacementXenotype)
 	//	=> ModifiableXenotypeDatabase.CustomXenotypes.TryGetValue(xenotypeDef.defName, out replacementXenotype);
 
 	private static void SetXenotypeForFaction(Faction faction, ref PawnGenerationRequest request)
@@ -47,7 +49,7 @@ public class PawnGenerator_GenerateGenes
 		if (TryGetCustomXenotypeByWeight<FactionDef>(faction.def.defName, out var factionXenotype))
 			request.ForcedCustomXenotype = factionXenotype;
 
-		if (faction?.ideos?.PrimaryIdeo?.memes is { } memes)
+		if (faction.ideos?.PrimaryIdeo?.memes is { } memes)
 			SetXenotypeForMemes(memes, ref request);
 	}
 
@@ -74,9 +76,10 @@ public class PawnGenerator_GenerateGenes
 		if (Rand.Range(0f, 1f) <= xenotypeChances.GetCustomXenotypeChanceValueSum()
 			&& xenotypeChances.CustomXenotypeChances.TryRandomElementByWeight(chance => chance.RawValue, out var randomResult))
 		{
-			result = randomResult.Xenotype is ModifiableXenotype.Generated xenotypeGenerator
+			var randomResultXenotype = randomResult.Xenotype;
+			result = randomResultXenotype is ModifiableXenotype.Generated xenotypeGenerator
 				? xenotypeGenerator.GenerateXenotype(xenotypeChances)
-				: randomResult.Xenotype.CustomXenotype;
+				: randomResultXenotype.CustomXenotype ?? throw new("Tried setting null xenotype");
 
 			return true;
 		}

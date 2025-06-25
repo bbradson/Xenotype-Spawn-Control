@@ -9,10 +9,11 @@ namespace XenotypeSpawnControl;
 
 public partial class ModifiableXenotype
 {
-	public class Hybrid : Generated
+	public class Hybrid() : Generated(Strings.HybridKey)
 	{
 		public override string DisplayLabel => Strings.Translated.Hybrid.CapitalizeFirst();
-		public override string? Tooltip => Strings.Translated.HybridTooltip;
+		
+		public override string Tooltip => Strings.Translated.HybridTooltip;
 
 		public override CustomXenotype GenerateXenotype<T>(XenotypeChances<T> xenotypeChances)
 		{
@@ -29,25 +30,29 @@ public partial class ModifiableXenotype
 			return CustomXenotype;
 		}
 
-		public override float GetDefaultChanceIn<T>(T def)
-			=> def.GetModExtension<Extension>()?.hybridChance ?? 0f;
+		public override float GetDefaultChanceIn<T>(T def) => def.GetModExtension<Extension>()?.hybridChance ?? 0f;
 
-		private static IEnumerable<GeneDef> GetParentGenes<T>(XenotypeChances<T> xenotypeChances, out ModifiableXenotype? parentXenotype, ModifiableXenotype? otherParentXenotype = null)
+		private static List<GeneDef> GetParentGenes<T>(XenotypeChances<T> xenotypeChances,
+			out ModifiableXenotype? parentXenotype, ModifiableXenotype? otherParentXenotype = null)
 			where T : Def
 		{
 			parentXenotype
-				= xenotypeChances.AllAllowedXenotypeChances.Where(xenoChance => IsValidParentXenotype(xenoChance.Xenotype, otherParentXenotype)).TryRandomElementByWeight(chance
-					=> chance.RawValue, out var xenotypeChance)
-				? xenotypeChance.Xenotype
-				: null;
+				= xenotypeChances.AllAllowedXenotypeChances
+					.Where(xenoChance => IsValidParentXenotype(xenoChance.Xenotype, otherParentXenotype))
+					.TryRandomElementByWeight(static chance
+						=> chance.RawValue, out var xenotypeChance)
+					? xenotypeChance.Xenotype
+					: null;
+			
 			parentXenotype ??= GetFallbackXenotype(xenotypeChances, otherParentXenotype);
 
 			return GetGenesForXenotype(xenotypeChances, parentXenotype);
 		}
 
-		private static IEnumerable<GeneDef> GetGenesForXenotype<T>(XenotypeChances<T> xenotypeChances, ModifiableXenotype? parentXenotype) where T : Def
+		private static List<GeneDef> GetGenesForXenotype<T>(XenotypeChances<T> xenotypeChances,
+			ModifiableXenotype? parentXenotype) where T : Def
 		{
-			IEnumerable<GeneDef> parentGenes = null;
+			List<GeneDef>? parentGenes = null;
 			if (parentXenotype is not null)
 			{
 				if (parentXenotype is Generated generatedParent)
@@ -57,37 +62,46 @@ public partial class ModifiableXenotype
 				}
 				else
 				{
-					parentGenes = parentXenotype.xenotypeGenes;
+					parentGenes = parentXenotype.XenotypeGenes;
 				}
 			}
 
-			return parentGenes;
+			return parentGenes ?? throw new($"Failed to get genes for {parentXenotype}");
 		}
 
-		private static ModifiableXenotype GetFallbackXenotype<T>(XenotypeChances<T> xenotypeChances, ModifiableXenotype? excludedXenotype) where T : Def
+		private static ModifiableXenotype GetFallbackXenotype<T>(XenotypeChances<T> xenotypeChances,
+			ModifiableXenotype? excludedXenotype) where T : Def
 		{
 			var parentSource = xenotypeChances.AllAllowedXenotypeChances
-			.Select(xenoChance => xenoChance.Xenotype)
-			.Where(xenotype => IsValidParentXenotype(xenotype, excludedXenotype));
-			//if not enough xenotypes allowed check all
+				.Select(static xenoChance => xenoChance.Xenotype)
+				.Where(xenotype => IsValidParentXenotype(xenotype, excludedXenotype))
+				.ToList();
+			
+			// if not enough xenotypes allowed check all
 			if (!parentSource.Any())
+			{
 				parentSource = ModifiableXenotypeDatabase.AllValues.Values
-				.Where(xenotype => IsValidParentXenotype(xenotype, excludedXenotype));
+					.Where(xenotype => IsValidParentXenotype(xenotype, excludedXenotype))
+					.ToList();
+			}
 
 			return parentSource.RandomElement();
 		}
 
-		private static bool IsValidParentXenotype(ModifiableXenotype checkXenotype, ModifiableXenotype? excludedXenotype)
-			=> checkXenotype is not Hybrid && checkXenotype.Def != XenotypeDefOf.Baseliner && checkXenotype != excludedXenotype;
+		private static bool IsValidParentXenotype(ModifiableXenotype checkXenotype,
+			ModifiableXenotype? excludedXenotype)
+			=> checkXenotype is not Hybrid
+				&& checkXenotype.Def != XenotypeDefOf.Baseliner
+				&& checkXenotype != excludedXenotype;
 
-		public Hybrid() : base(Strings.HybridKey) { }
-
-		public static void AddInheritedGenes(List<GeneDef> targetList, IEnumerable<GeneDef> mamaGenes, IEnumerable<GeneDef> papaGenes)
+		public static void AddInheritedGenes(List<GeneDef> targetList, IEnumerable<GeneDef> mamaGenes,
+			IEnumerable<GeneDef> papaGenes)
 		{
 			targetList.AddRange(mamaGenes);
 			targetList.AddRange(papaGenes);
 			targetList.RemoveDuplicates();
-			FixGeneMetabolism(targetList, targetList.CalculateMetabolism(), Rand.Range(-3, 4), allowAdding: false);
+			FixGeneMetabolism(targetList, targetList.CalculateMetabolism(),
+				Rand.Range(-3, 4), allowAdding: false);
 		}
 	}
 }

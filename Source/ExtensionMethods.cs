@@ -21,6 +21,7 @@ public static class ExtensionMethods
 		var sum = 0;
 		for (var i = 0; i < list.Count; i++)
 			sum += selector(list[i]);
+		
 		return sum;
 	}
 
@@ -29,6 +30,7 @@ public static class ExtensionMethods
 		var sum = 0f;
 		for (var i = 0; i < list.Count; i++)
 			sum += selector(list[i]);
+		
 		return sum;
 	}
 }

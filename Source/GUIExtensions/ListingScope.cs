@@ -5,7 +5,7 @@
 
 namespace XenotypeSpawnControl.GUIExtensions;
 
-public struct ListingScope : IDisposable
+public readonly struct ListingScope : IDisposable
 {
 	public Listing_Standard Listing { get; }
 

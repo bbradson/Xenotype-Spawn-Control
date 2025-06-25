@@ -10,13 +10,16 @@ namespace XenotypeSpawnControl;
 
 public static class ModifiableXenotypeDatabase
 {
-	public static Dictionary<string, ModifiableXenotype> AllValues = new();
-	public static Dictionary<string, ModifiableXenotype> CustomXenotypes = new();
+	public static Dictionary<string, ModifiableXenotype> AllValues { get; } = new();
+	public static Dictionary<string, ModifiableXenotype> CustomXenotypes { get; } = new();
 
 	static ModifiableXenotypeDatabase()
 	{
 		if (DefDatabase<XenotypeDef>.AllDefsListForReading.Count == 0)
-			Log.Error($"XenotypeDef database is empty.{(ModsConfig.BiotechActive ? "" : " Consider activating Biotech. This is a mod for Biotech genes.")}");
+		{
+			Log.Error($"XenotypeDef database is empty.{
+				(ModsConfig.BiotechActive ? "" : " Consider activating Biotech. This is a mod for Biotech genes.")}");
+		}
 
 		foreach (var def in DefDatabase<XenotypeDef>.AllDefsListForReading)
 			AllValues[def.defName] = new(def);
@@ -30,7 +33,7 @@ public static class ModifiableXenotypeDatabase
 	public static ModifiableXenotype? TryGetXenotype(string name)
 		=> AllValues.TryGetValue(name, out var xenotype)
 		? xenotype
-		: TryLoadCustomXenotype(name)
+		: TryLoadCustomXenotype(name, false)
 		?? TryLoadXenotypeDef(name);
 
 	public static ModifiableXenotype? GetOrAddCustomXenotype(CustomXenotype xenotype)
@@ -40,11 +43,12 @@ public static class ModifiableXenotypeDatabase
 
 	public static void RemoveCustomXenotype(string name)
 	{
-		//if custom xenotype overrides premade xenotype enable premade one instead
-		if (DefDatabase<XenotypeDef>.AllDefsListForReading.FirstOrDefault(def => def.defName == name) is {} def)
+		// if custom xenotype overrides premade xenotype enable premade one instead
+		if (DefDatabase<XenotypeDef>.AllDefsListForReading.FirstOrDefault(item => item.defName == name) is { } def)
 			AllValues[def.defName] = new(def);
 		else
 			AllValues.Remove(name);
+		
 		CustomXenotypes.Remove(name);
 		XenotypeChanceDatabases.RemoveCustomXenotype(name);
 	}
@@ -65,7 +69,7 @@ public static class ModifiableXenotypeDatabase
 		}
 
 		// CharacterCardUtility.CustomXenotypes, but without mod mismatch and version check
-		foreach (var xenotypeFile in GenFilePaths.AllCustomXenotypeFiles.OrderBy((FileInfo f) => f.LastWriteTime))
+		foreach (var xenotypeFile in GenFilePaths.AllCustomXenotypeFiles.OrderBy(static f => f.LastWriteTime))
 			TryLoadCustomXenotype(Path.GetFileNameWithoutExtension(xenotypeFile.Name));
 	}
 
@@ -74,14 +78,54 @@ public static class ModifiableXenotypeDatabase
 		? AllValues[name] = new(xenoDef)
 		: null;
 
-	private static ModifiableXenotype? TryLoadCustomXenotype(string name)
+	private static ModifiableXenotype? TryLoadCustomXenotype(string name, bool logFailure = true)
 	{
 		var xenotype = Current.Game?.customXenotypeDatabase?.customXenotypes.Find(xenotype => xenotype.name == name);
 		if (xenotype is null)
-			GameDataSaveLoader.TryLoadXenotype(GenFilePaths.AbsFilePathForXenotype(GenFile.SanitizedFileName(name)), out xenotype);
+		{
+			TryLoadXenotypeFromFile(GenFilePaths.AbsFilePathForXenotype(GenFile.SanitizedFileName(name)),
+				out xenotype, logFailure);
+		}
 
-		return xenotype is null ? null
+		return xenotype is null
+			? null
 			: SetCustomXenotype(xenotype);
+	}
+
+	public static void TryLoadXenotypeFromFile(string xenotypeName, out CustomXenotype? xenotype,
+		bool logFailure = true)
+	{
+		xenotype = null;
+		var absPath = GenFilePaths.AbsFilePathForXenotype(GenFile.SanitizedFileName(xenotypeName));
+		
+		try
+		{
+			Scribe.loader.InitLoading(absPath);
+			try
+			{
+				ScribeMetaHeaderUtility.LoadGameDataHeader(ScribeMetaHeaderUtility.ScribeHeaderMode.Xenotype, true);
+				Scribe_Deep.Look(ref xenotype, nameof(xenotype));
+				Scribe.loader.FinalizeLoading();
+			}
+			catch
+			{
+				Scribe.ForceStop();
+				throw;
+			}
+
+			xenotype!.fileName = Path.GetFileNameWithoutExtension(new FileInfo(absPath).Name);
+		}
+		catch (Exception ex)
+		{
+			if (logFailure)
+			{
+				Log.Error($"Failed loading xenotype named '{
+					xenotypeName}' while trying to resolve its configs for Xenotype Spawn Control.\n{ex}");
+			}
+
+			xenotype = null;
+			Scribe.ForceStop();
+		}
 	}
 
 	private static ModifiableXenotype? SetCustomXenotype(CustomXenotype xenotype)
@@ -89,10 +133,10 @@ public static class ModifiableXenotypeDatabase
 		if (Array.IndexOf(InvalidNames, xenotype.name) >= 0)
 			return null;
 
-		//forbid adding baseliner custom xenotype
+		// forbid adding baseliner custom xenotype
 		if (xenotype.name == XenotypeDefOf.Baseliner.defName)
 		{
-			//TODO:maybe add some kind of warning that baseliner won't be overridden
+			// TODO:maybe add some kind of warning that baseliner won't be overridden
 			return null;
 		}
 
@@ -107,9 +151,9 @@ public static class ModifiableXenotypeDatabase
 		XenotypeChanceDatabases.AddModifiableXenotype(xenotype);
 	}
 
-	private static string[] InvalidNames { get; } = new[]
-	{
+	private static string[] InvalidNames { get; } =
+	[
 		Strings.HybridKey,
 		Strings.RandomGenesKey
-	};
+	];
 }

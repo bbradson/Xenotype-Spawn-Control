@@ -7,5 +7,5 @@ namespace XenotypeSpawnControl;
 
 public class EmptyFactionDef : FactionDef
 {
-	public static EmptyFactionDef Instance = new() { defName = Strings.NoFactionKey };
+	public static EmptyFactionDef Instance { get; } = new() { defName = Strings.NoFactionKey };
 }

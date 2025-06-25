@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
-	<PawnKinds>PawnKinds</PawnKinds>
-	<Editor>Editor</Editor>
-	<NoFaction>No Faction</NoFaction>
-	<HybridTooltip>The chance for pawns to spawn with a set of genes generated from two valid parent Xenotypes</HybridTooltip>
-	<RandomGenes>Random Genes</RandomGenes>
-	<RandomGenesTooltip>The chance for pawns to spawn with entirely random genes, only constrained by metabolism limits</RandomGenesTooltip>
-	<MakeYourOwn>Make your own</MakeYourOwn>
-	<INACTIVE>INACTIVE</INACTIVE>
-	<edit>edit</edit>
-	<ConfirmResetXenotypeSpawnControl>Really reset all Xenotype Spawn Control settings?</ConfirmResetXenotypeSpawnControl>
-	<Templates>Templates</Templates>
-	<NoTemplateHint>No Templates</NoTemplateHint>
-	<AllowArchiteXenotypes>Allow Archite Xenotypes</AllowArchiteXenotypes>
-	<Weight>Weight</Weight>
-	<AbsoluteToggle>Set all chances to absolute</AbsoluteToggle>
-	<WeightedToggle>Set all chances to weighted</WeightedToggle>
-	<WeightSetterButton>Set all weights to</WeightSetterButton>
-	<WeightDistrubutionHint>Weighted Xenotypes will get distrubuted among</WeightDistrubutionHint>
-	<NoWeightedHint>No weighted Xenotypes</NoWeightedHint>
-	<IndividualAbsoluteModeToggleTooltip>Toggle whether this Xenotype uses absolute chances</IndividualAbsoluteModeToggleTooltip>
-	<CustomHint>custom</CustomHint>
+	<bs.xsc.PawnKinds>PawnKinds</bs.xsc.PawnKinds>
+	<bs.xsc.Editor>Editor</bs.xsc.Editor>
+	<bs.xsc.NoFaction>No Faction</bs.xsc.NoFaction>
+	<bs.xsc.HybridTooltip>The chance for pawns to spawn with a set of genes generated from two valid parent Xenotypes</bs.xsc.HybridTooltip>
+	<bs.xsc.RandomGenes>Random Genes</bs.xsc.RandomGenes>
+	<bs.xsc.RandomGenesTooltip>The chance for pawns to spawn with entirely random genes, only constrained by metabolism limits</bs.xsc.RandomGenesTooltip>
+	<bs.xsc.MakeYourOwn>Make your own</bs.xsc.MakeYourOwn>
+	<bs.xsc.INACTIVE>INACTIVE</bs.xsc.INACTIVE>
+	<bs.xsc.Edit>Edit</bs.xsc.Edit>
+	<bs.xsc.Apply>Apply</bs.xsc.Apply>
+	<bs.xsc.ConfirmResetXenotypeSpawnControl>Really reset all Xenotype Spawn Control settings?</bs.xsc.ConfirmResetXenotypeSpawnControl>
+	<bs.xsc.Templates>Templates</bs.xsc.Templates>
+	<bs.xsc.NoTemplateHint>No Templates</bs.xsc.NoTemplateHint>
+	<bs.xsc.AllowArchiteXenotypes>Allow Archite Xenotypes</bs.xsc.AllowArchiteXenotypes>
+	<bs.xsc.Weight>Weight</bs.xsc.Weight>
+	<bs.xsc.AbsoluteToggle>Set all chances to absolute</bs.xsc.AbsoluteToggle>
+	<bs.xsc.WeightedToggle>Set all chances to weighted</bs.xsc.WeightedToggle>
+	<bs.xsc.WeightSetterButton>Set all weights to</bs.xsc.WeightSetterButton>
+	<bs.xsc.IndividualAbsoluteModeToggleTooltip>Toggle whether this Xenotype uses absolute chances</bs.xsc.IndividualAbsoluteModeToggleTooltip>
 </LanguageData>

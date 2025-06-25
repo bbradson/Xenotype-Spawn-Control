@@ -3,6 +3,8 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using JetBrains.Annotations;
+
 namespace XenotypeSpawnControl.HarmonyPatches;
 
 public static class StartingPawnUtility
@@ -14,8 +16,11 @@ public static class StartingPawnUtility
 	{
 		[HarmonyPrefix]
 		[HarmonyPriority(Priority.First)]
-		public static bool Prefix(ref PawnGenerationRequest __result, int index) => index != MAGIC_NUMBER || SetEmptyRequest(ref __result);
-		private static bool SetEmptyRequest(ref PawnGenerationRequest __result)
+		[UsedImplicitly]
+		public static bool Prefix(ref PawnGenerationRequest __result, int index)
+			=> index != MAGIC_NUMBER || SetEmptyRequest(out __result);
+
+		private static bool SetEmptyRequest(out PawnGenerationRequest __result)
 		{
 			__result = default;
 			return false;
@@ -27,6 +32,7 @@ public static class StartingPawnUtility
 	{
 		[HarmonyPrefix]
 		[HarmonyPriority(Priority.First)]
+		[UsedImplicitly]
 		public static bool Prefix(int index, in PawnGenerationRequest request)
 		{
 			if (request.ForcedCustomXenotype != null)

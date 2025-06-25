@@ -5,7 +5,7 @@
 
 namespace XenotypeSpawnControl.GUIExtensions;
 
-public struct ScrollViewScope : IDisposable
+public readonly struct ScrollViewScope : IDisposable
 {
 	public ScrollViewScope(Rect outRect, ref Vector2 scrollPosition, Rect viewRect, bool showScrollbars = true)
 		=> Widgets.BeginScrollView(outRect, ref scrollPosition, viewRect, showScrollbars);

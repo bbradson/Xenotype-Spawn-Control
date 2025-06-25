@@ -7,10 +7,10 @@ namespace XenotypeSpawnControl;
 
 public partial class ModifiableXenotype
 {
-	public class Random : Generated
+	public class Random() : Generated(Strings.RandomGenesKey)
 	{
 		public override string DisplayLabel => Strings.Translated.RandomGenes;
-		public override string? Tooltip => Strings.Translated.RandomGenesTooltip;
+		public override string Tooltip => Strings.Translated.RandomGenesTooltip;
 
 		public override CustomXenotype GenerateXenotype<T>(XenotypeChances<T> xenotypeChances)
 		{
@@ -27,6 +27,7 @@ public partial class ModifiableXenotype
 			genes.RemoveAll(gene => gene.prerequisite != null && !genes.Contains(gene.prerequisite));
 
 			var metabolism = genes.CalculateMetabolism();
+			// ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable
 			if (!GeneTuning.BiostatRange.Includes(metabolism))
 			{
 				var targetMetabolism = Rand.Range(-3, 4);
@@ -43,8 +44,8 @@ public partial class ModifiableXenotype
 		private static void AddRandomGeneSetGenes(List<GeneDef> genes, int geneSetCount)
 		{
 			var allGeneDefs = DefDatabase<GeneDef>.AllDefsListForReading;
-			var selectionWeights = allGeneDefs.ConvertAll(def => def.selectionWeight);
-			var canGenerateInGeneSetFlags = allGeneDefs.ConvertAll(def => def.canGenerateInGeneSet);
+			var selectionWeights = allGeneDefs.ConvertAll(static def => def.selectionWeight);
+			var canGenerateInGeneSetFlags = allGeneDefs.ConvertAll(static def => def.canGenerateInGeneSet);
 
 			var allGeneDefsCount = allGeneDefs.Count;
 			for (var i = 0; i < allGeneDefsCount; i++)
@@ -71,7 +72,5 @@ public partial class ModifiableXenotype
 
 		public override float GetDefaultChanceIn<T>(T def)
 			=> def.GetModExtension<Extension>()?.randomGenesChance ?? 0f;
-
-		public Random() : base(Strings.RandomGenesKey) { }
 	}
 }

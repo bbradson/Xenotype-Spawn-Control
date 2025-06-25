@@ -2,11 +2,21 @@
 <ModMetaData>
 	<name>Xenotype Spawn Control</name>
 	<packageId>bs.xenotypespawncontrol</packageId>
+	<modIconPath IgnoreIfNoMatchingField="True">XenotypeSpawnControl/ModIcon</modIconPath>
 	<supportedVersions>
 		<li>1.4</li>
+		<li>1.5</li>
+		<li>1.6</li>
 	</supportedVersions>
-	<author>bradson</author>
+	<authors>
+		<li>Bradson</li>
+		<li>Gordohn</li>
+	</authors>
 	<url>https://github.com/bbradson/Xenotype-Spawn-Control</url>
+	<loadAfter>
+		<li>brrainz.harmony</li>
+		<li>Ludeon.RimWorld</li>
+	</loadAfter>
 	<modDependencies>
 		<li>
 			<packageId>brrainz.harmony</packageId>

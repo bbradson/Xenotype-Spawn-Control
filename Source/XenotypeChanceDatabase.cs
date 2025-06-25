@@ -13,7 +13,8 @@ public static class XenotypeChanceDatabase<T> where T : Def
 
 	public static XenotypeChances<T> For(string defName) => _allValues.GetOrAdd(defName);
 
-	public static string From(XenotypeChances<T> xenotypeChances) => _allValues.First(pair => pair.Value == xenotypeChances).Key;
+	public static string From(XenotypeChances<T> xenotypeChances)
+		=> _allValues.First(pair => pair.Value == xenotypeChances).Key;
 
 	public static void ResetAll()
 	{
@@ -24,8 +25,7 @@ public static class XenotypeChanceDatabase<T> where T : Def
 	public static void ExposeData()
 	{
 		if (Scribe.mode == LoadSaveMode.Saving
-			&& !_allValues.Any(pair
-				=> pair.Value.RequiresSaving()))
+			&& !_allValues.Any(static pair => pair.Value.RequiresSaving()))
 		{
 			return;
 		}

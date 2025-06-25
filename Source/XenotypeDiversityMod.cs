@@ -10,35 +10,31 @@ global using HarmonyLib;
 global using RimWorld;
 global using UnityEngine;
 global using Verse;
-using System.Diagnostics;
 using System.Security;
+using JetBrains.Annotations;
 
 [assembly: AllowPartiallyTrustedCallers]
 [assembly: SecurityTransparent]
 [assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
-[assembly: Debuggable(false, false)]
 
 namespace XenotypeSpawnControl;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class XenotypeDiversityMod : Mod
 {
 	public XenotypeDiversityMod(ModContentPack content) : base(content)
 	{
-		_harmony = new(content.PackageId);
-		_settings = GetSettings<ModSettings>();
-		_content = content;
-		_harmony.PatchAll();
+		Harmony = new(content.PackageId);
+		Settings = GetSettings<ModSettings>();
+		Content = content;
+		Harmony.PatchAll();
 	}
 
 	public override string SettingsCategory() => Content.Name;
 
 	public override void DoSettingsWindowContents(Rect inRect) => ModSettingsWindow.DoWindowContents(inRect);
 
-	public static Harmony Harmony => _harmony!;
-	private static Harmony? _harmony;
-	public static ModSettings Settings => _settings!;
-	private static ModSettings? _settings;
-
-	public new static ModContentPack Content => _content!;
-	private static ModContentPack? _content;
+	public static Harmony Harmony { get; private set; } = null!;
+	public static ModSettings Settings { get; private set; } = null!;
+	public new static ModContentPack Content { get; private set; } = null!;
 }
