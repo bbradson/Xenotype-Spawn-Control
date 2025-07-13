@@ -188,20 +188,25 @@ public static class ModSettingsWindow
 
 			var allowedXenotypes = xenotypeChances.AllAllowedXenotypeChances
 				.Select(static xenotypeChance => (xenotypeChance.Xenotype, xenotypeChance)).ToList();
-			
+
 			allowedXenotypes.Sort(static (aKey, bKey) =>
 			{
 				var a = aKey.Xenotype;
 				var b = bKey.Xenotype;
+
+				var bIsBaseliner = b.Def == XenotypeDefOf.Baseliner;
+
 				return a.Def == XenotypeDefOf.Baseliner
-					? b.Def == XenotypeDefOf.Baseliner ? CompareLabelsAndNames(a, b) : -1
-					: a is ModifiableXenotype.Generated == b is ModifiableXenotype.Generated
-						? a is ModifiableXenotype.Random != b is ModifiableXenotype.Random
-							? a is ModifiableXenotype.Random ? -1 : 1
-							: CompareLabelsAndNames(a, b)
-						: a is ModifiableXenotype.Generated
-							? -1
-							: 1;
+					? bIsBaseliner ? CompareLabelsAndNames(a, b) : -1
+					: bIsBaseliner
+						? 1
+						: a is ModifiableXenotype.Generated == b is ModifiableXenotype.Generated
+							? a is ModifiableXenotype.Random != b is ModifiableXenotype.Random
+								? a is ModifiableXenotype.Random ? -1 : 1
+								: CompareLabelsAndNames(a, b)
+							: a is ModifiableXenotype.Generated
+								? -1
+								: 1;
 			});
 
 			// then show all configurable xenotypes
