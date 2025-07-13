@@ -131,6 +131,9 @@ public static class ModSettingsWindow
 			var listing = listingScope.Listing;
 
 			var defs = Defs.Select(static def => (def.LabelCap.Resolve(), def.defName)).ToList();
+
+			ReplaceEmptyLabels(defs);
+
 			defs.Sort(static (a, b)
 				=> string.CompareOrdinal(a.Item1, b.Item1) is var labelResult && labelResult != 0
 					? labelResult
@@ -162,6 +165,20 @@ public static class ModSettingsWindow
 				_currentlySelectedDefName == Strings.NoFactionKey))
 			{
 				_currentlySelectedDefName = Strings.NoFactionKey;
+			}
+		}
+
+		private static void ReplaceEmptyLabels(List<(string label, string defName)> defs)
+		{
+			for (var i = 0; i < defs.Count; i++)
+			{
+				var def = defs[i];
+				ref var label = ref def.label;
+				if (!string.IsNullOrWhiteSpace(label))
+					continue;
+
+				label = def.defName;
+				defs[i] = def;
 			}
 		}
 
